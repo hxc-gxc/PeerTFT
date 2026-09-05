@@ -1,46 +1,30 @@
 # Single-VPS deployment: zero GAFAM services, no file storage anywhere.
 #
-# - signaling: stateless WebSocket room-matching relay (packages/signaling_server)
+# - signaling: stateless WebSocket room-matching relay
+# - web:       Flutter web app served by nginx
 # - stun:      self-hosted STUN only (coturn --stun-only) for NAT traversal
-# - caddy:     reverse proxy + automatic Let's Encrypt TLS in front of signaling
 #
-# There is deliberately no TURN service here: a TURN relay would carry file
-# bytes across this VPS, which contradicts the "no server ever sees file
-# content" principle. A failed P2P handshake surfaces as an explicit error in
-# the client instead of silently falling back to a relay.
+# Traefik routing (TLS, domains) is managed via the Dokploy UI — no labels here.
+# There is deliberately no TURN service: a TURN relay would carry file bytes
+# across this VPS, contradicting the "no server ever sees file content" principle.
 services:
   signaling:
-    build:
-      context: .
-      dockerfile: packages/signaling_server/Dockerfile
+    image: ghcr.io/hxc-gxc/peertft-signaling:latest
     restart: unless-stopped
     environment:
       PORT: "8080"
     expose:
       - "8080"
-    ports:
-      - "8080:8080"
+
+  web:
+    image: ghcr.io/hxc-gxc/peertft-web:latest
+    restart: unless-stopped
+    expose:
+      - "80"
 
   stun:
     image: coturn/coturn:latest
     restart: unless-stopped
-    command: ["-n", "--stun-only", "--listening-port=3478"]
+    command: ["-n", "--stun-only", "--listening-port=3478", "--external-ip=217.160.159.44"]
     ports:
       - "3478:3478/udp"
-
-  caddy:
-    image: caddy:latest
-    restart: unless-stopped
-    ports:
-      - "443:443"
-      - "80:80"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - signaling
-
-volumes:
-  caddy_data:
-  caddy_config:
