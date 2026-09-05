@@ -36,9 +36,9 @@ void main() {
     });
 
     test('RoomError preserves the reason', () {
-      const message = RoomError(RoomErrorReason.roomFull);
+      const message = RoomError(RoomErrorReason.codeAlreadyInUse);
       final decoded = SignalingMessage.fromJson(message.toJson());
-      expect((decoded as RoomError).reason, RoomErrorReason.roomFull);
+      expect((decoded as RoomError).reason, RoomErrorReason.codeAlreadyInUse);
     });
 
     test('RelayMessage carries an opaque payload string untouched', () {

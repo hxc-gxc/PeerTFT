@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -24,15 +25,18 @@ Future<void> main(List<String> args) async {
       .addMiddleware(logRequests())
       .addHandler(_router(roomManager: roomManager, rateLimiter: rateLimiter));
 
+  final sweepTimer = Timer.periodic(const Duration(minutes: 1), (_) => rateLimiter.sweep());
+
   final server = await shelf_io.serve(handler, InternetAddress.anyIPv4, port);
   // ignore: avoid_print
   print('signaling_server listening on ${server.address.host}:${server.port}');
 
-  ProcessSignal.sigterm.watch().listen((_) => _shutdown(server, roomManager));
-  ProcessSignal.sigint.watch().listen((_) => _shutdown(server, roomManager));
+  ProcessSignal.sigterm.watch().listen((_) => _shutdown(server, roomManager, sweepTimer));
+  ProcessSignal.sigint.watch().listen((_) => _shutdown(server, roomManager, sweepTimer));
 }
 
-Future<void> _shutdown(HttpServer server, RoomManager roomManager) async {
+Future<void> _shutdown(HttpServer server, RoomManager roomManager, Timer sweepTimer) async {
+  sweepTimer.cancel();
   roomManager.dispose();
   await server.close(force: true);
   exit(0);

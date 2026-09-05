@@ -60,6 +60,8 @@ void main() {
       manager.join(code: 'code', handle: a);
       manager.join(code: 'code', handle: b);
 
+      expect(a.received, [isA<PeerConnected>()]); // joined notification, no relay yet
+
       manager.relay(
         code: 'code',
         fromPeerId: 'a',
@@ -67,7 +69,7 @@ void main() {
       );
       expect(b.received.last, isA<RelayMessage>());
       expect((b.received.last as RelayMessage).payload, 'offer-json');
-      expect(a.received, isEmpty);
+      expect(a.received, hasLength(1)); // still just PeerConnected, no echo
 
       // Wrong target id: dropped rather than misdelivered.
       manager.relay(
@@ -75,7 +77,7 @@ void main() {
         fromPeerId: 'a',
         message: const RelayMessage(targetPeerId: 'not-b', payload: 'x'),
       );
-      expect(b.received, hasLength(1));
+      expect(b.received, hasLength(2));
     });
 
     test('disconnect tears down the room and notifies the remaining peer', () {
