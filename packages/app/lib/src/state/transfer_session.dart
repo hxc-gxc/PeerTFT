@@ -88,13 +88,21 @@ class TransferSession extends Notifier<TransferState> {
   String? _code;
 
   static final _signalingWsUri = Uri.parse(
-    const String.fromEnvironment('SIGNALING_WS_URL', defaultValue: 'ws://localhost:8080/ws'),
+    const String.fromEnvironment(
+      'SIGNALING_WS_URL',
+      defaultValue: 'ws://localhost:8080/ws',
+    ),
   );
   static final _signalingHttpUri = Uri.parse(
-    const String.fromEnvironment('SIGNALING_HTTP_URL', defaultValue: 'http://localhost:8080'),
+    const String.fromEnvironment(
+      'SIGNALING_HTTP_URL',
+      defaultValue: 'http://localhost:8080',
+    ),
   );
-  static const _stunUri =
-      String.fromEnvironment('STUN_URL', defaultValue: 'stun:localhost:3478');
+  static const _stunUri = String.fromEnvironment(
+    'STUN_URL',
+    defaultValue: 'stun:localhost:3478',
+  );
 
   Future<void> startSend(String filePath) async {
     await _beginSession(

@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -88,6 +88,9 @@ jobs:
         run: dart pub global activate melos 8.6.0
       - name: Bootstrap
         run: melos bootstrap
+      - name: Create Android project files
+        working-directory: packages/app
+        run: flutter create --platforms=android .
       - name: Build APK
         working-directory: packages/app
         run: flutter build apk --debug
@@ -116,6 +119,9 @@ jobs:
         run: dart pub global activate melos 8.6.0
       - name: Bootstrap
         run: melos bootstrap
+      - name: Create Linux project files
+        working-directory: packages/app
+        run: flutter create --platforms=linux .
       - name: Build Linux
         working-directory: packages/app
         run: flutter build linux
@@ -137,6 +143,9 @@ jobs:
         run: dart pub global activate melos 8.6.0
       - name: Bootstrap
         run: melos bootstrap
+      - name: Create macOS project files
+        working-directory: packages/app
+        run: flutter create --platforms=macos .
       - name: Build macOS
         working-directory: packages/app
         run: flutter build macos
@@ -158,6 +167,9 @@ jobs:
         run: dart pub global activate melos 8.6.0
       - name: Bootstrap
         run: melos bootstrap
+      - name: Create Windows project files
+        working-directory: packages/app
+        run: flutter create --platforms=windows .
       - name: Build Windows
         working-directory: packages/app
         run: flutter build windows

@@ -12,6 +12,9 @@ RUN sed -i '/- packages\/signaling_server/d' pubspec.yaml
 
 WORKDIR /app/packages/app
 
+# Web platform dir is gitignored (generated); recreate it before building.
+RUN flutter create --platforms=web .
+
 ARG SIGNALING_WS_URL=ws://localhost:8080/ws
 ARG SIGNALING_HTTP_URL=http://localhost:8080
 ARG STUN_URL=stun:localhost:3478
