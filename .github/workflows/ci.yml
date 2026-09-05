@@ -96,7 +96,11 @@ jobs:
         run: melos bootstrap
       - name: Build APK
         working-directory: packages/app
-        run: flutter build apk --debug
+        run: |
+          flutter build apk --debug \
+            --dart-define=SIGNALING_WS_URL=wss://signal.noredflag.fr/ws \
+            --dart-define=SIGNALING_HTTP_URL=https://signal.noredflag.fr \
+            --dart-define=STUN_URL=stun:signal.noredflag.fr:3478
       - uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk
@@ -127,7 +131,11 @@ jobs:
         run: flutter create --platforms=linux .
       - name: Build Linux
         working-directory: packages/app
-        run: flutter build linux
+        run: |
+          flutter build linux \
+            --dart-define=SIGNALING_WS_URL=wss://signal.noredflag.fr/ws \
+            --dart-define=SIGNALING_HTTP_URL=https://signal.noredflag.fr \
+            --dart-define=STUN_URL=stun:signal.noredflag.fr:3478
       - uses: actions/upload-artifact@v4
         with:
           name: linux-build
@@ -151,7 +159,11 @@ jobs:
         run: flutter create --platforms=macos .
       - name: Build macOS
         working-directory: packages/app
-        run: flutter build macos
+        run: |
+          flutter build macos \
+            --dart-define=SIGNALING_WS_URL=wss://signal.noredflag.fr/ws \
+            --dart-define=SIGNALING_HTTP_URL=https://signal.noredflag.fr \
+            --dart-define=STUN_URL=stun:signal.noredflag.fr:3478
       - uses: actions/upload-artifact@v4
         with:
           name: macos-build
@@ -175,7 +187,11 @@ jobs:
         run: flutter create --platforms=windows .
       - name: Build Windows
         working-directory: packages/app
-        run: flutter build windows
+        run: |
+          flutter build windows \
+            --dart-define=SIGNALING_WS_URL=wss://signal.noredflag.fr/ws \
+            --dart-define=SIGNALING_HTTP_URL=https://signal.noredflag.fr \
+            --dart-define=STUN_URL=stun:signal.noredflag.fr:3478
       - uses: actions/upload-artifact@v4
         with:
           name: windows-build
