@@ -1,6 +1,6 @@
 # packages/app/Dockerfile.web
 # Build context must be the repo root so packages/shared path-dep resolves.
-FROM ghcr.io/cirruslabs/flutter:3.44.6 AS build
+FROM ghcr.io/cirruslabs/flutter:stable AS build
 WORKDIR /app
 COPY pubspec.yaml ./pubspec.yaml
 COPY packages/shared ./packages/shared
@@ -13,7 +13,7 @@ RUN sed -i '/- packages\/signaling_server/d' pubspec.yaml
 WORKDIR /app/packages/app
 
 # Web platform dir is gitignored (generated); recreate it before building.
-RUN flutter create --platforms=web .
+RUN flutter create --no-pub --platforms=web .
 
 ARG SIGNALING_WS_URL=ws://localhost:8080/ws
 ARG SIGNALING_HTTP_URL=http://localhost:8080
