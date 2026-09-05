@@ -32,6 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     permissions:
+      contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4.2.2
@@ -54,6 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     permissions:
+      contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4.2.2
