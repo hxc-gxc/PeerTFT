@@ -28,18 +28,19 @@ class ConnectionMetrics {
   final String? candidateTypeUsed;
 
   Map<String, dynamic> toJson() => {
-        'outcome': outcome.name,
-        'timeToConnectMs': timeToConnect.inMilliseconds,
-        if (networkType != null) 'networkType': networkType,
-        if (candidateTypeUsed != null) 'candidateTypeUsed': candidateTypeUsed,
-      };
+    'outcome': outcome.name,
+    'timeToConnectMs': timeToConnect.inMilliseconds,
+    if (networkType != null) 'networkType': networkType,
+    if (candidateTypeUsed != null) 'candidateTypeUsed': candidateTypeUsed,
+  };
 }
 
 /// Posts [ConnectionMetrics] to the signaling server's `POST /metrics`.
 /// Best-effort and fire-and-forget: a failed report must never affect the
 /// transfer UX.
 class MetricsReporter {
-  MetricsReporter(this.metricsUri, {http.Client? client}) : _client = client ?? http.Client();
+  MetricsReporter(this.metricsUri, {http.Client? client})
+    : _client = client ?? http.Client();
 
   final Uri metricsUri;
   final http.Client _client;

@@ -1,11 +1,6 @@
 name: app
-description: >
-  PeerTFT client. Current scope is the throwaway prototype from the
-  architecture doc, section 13: join a room, complete a raw WebRTC
-  handshake (no application-layer encryption yet), exchange a "hello" over
-  the data channel, and report the ICE outcome. No file chunking, no UI
-  polish, no crypto -- see the top-level README for what's next.
-version: 0.1.0
+description: PeerTFT client — chunked file transfer over WebRTC DataChannel.
+version: 0.2.0
 publish_to: none
 resolution: workspace
 
@@ -22,6 +17,10 @@ dependencies:
   web_socket_channel: ^3.0.1
   http: ^1.2.2
   connectivity_plus: ^6.0.5
+  flutter_riverpod: ^2.6.1
+  file_picker: ^8.1.2
+  qr_flutter: ^4.1.0
+  crypto: ^3.0.5
 
 dev_dependencies:
   flutter_test:

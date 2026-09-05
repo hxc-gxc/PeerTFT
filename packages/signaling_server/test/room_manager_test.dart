@@ -45,40 +45,47 @@ void main() {
 
       expect(
         () => manager.join(code: 'renard-lampe', handle: _FakeHandle('c')),
-        throwsA(isA<RoomManagerException>().having(
-          (e) => e.reason,
-          'reason',
-          RoomErrorReason.codeAlreadyInUse,
-        )),
+        throwsA(
+          isA<RoomManagerException>().having(
+            (e) => e.reason,
+            'reason',
+            RoomErrorReason.codeAlreadyInUse,
+          ),
+        ),
       );
     });
 
-    test('relay forwards only to the other peer, and only with a matching target', () {
-      final manager = RoomManager();
-      final a = _FakeHandle('a');
-      final b = _FakeHandle('b');
-      manager.join(code: 'code', handle: a);
-      manager.join(code: 'code', handle: b);
+    test(
+      'relay forwards only to the other peer, and only with a matching target',
+      () {
+        final manager = RoomManager();
+        final a = _FakeHandle('a');
+        final b = _FakeHandle('b');
+        manager.join(code: 'code', handle: a);
+        manager.join(code: 'code', handle: b);
 
-      expect(a.received, [isA<PeerConnected>()]); // joined notification, no relay yet
+        expect(a.received, [
+          isA<PeerConnected>(),
+        ]); // joined notification, no relay yet
 
-      manager.relay(
-        code: 'code',
-        fromPeerId: 'a',
-        message: const RelayMessage(targetPeerId: 'b', payload: 'offer-json'),
-      );
-      expect(b.received.last, isA<RelayMessage>());
-      expect((b.received.last as RelayMessage).payload, 'offer-json');
-      expect(a.received, hasLength(1)); // still just PeerConnected, no echo
+        manager.relay(
+          code: 'code',
+          fromPeerId: 'a',
+          message: const RelayMessage(targetPeerId: 'b', payload: 'offer-json'),
+        );
+        expect(b.received.last, isA<RelayMessage>());
+        expect((b.received.last as RelayMessage).payload, 'offer-json');
+        expect(a.received, hasLength(1)); // still just PeerConnected, no echo
 
-      // Wrong target id: dropped rather than misdelivered.
-      manager.relay(
-        code: 'code',
-        fromPeerId: 'a',
-        message: const RelayMessage(targetPeerId: 'not-b', payload: 'x'),
-      );
-      expect(b.received, hasLength(2));
-    });
+        // Wrong target id: dropped rather than misdelivered.
+        manager.relay(
+          code: 'code',
+          fromPeerId: 'a',
+          message: const RelayMessage(targetPeerId: 'not-b', payload: 'x'),
+        );
+        expect(b.received, hasLength(2));
+      },
+    );
 
     test('disconnect tears down the room and notifies the remaining peer', () {
       final manager = RoomManager();
@@ -108,7 +115,10 @@ void main() {
         async.elapse(const Duration(seconds: 2));
 
         expect(a.received.last, isA<RoomError>());
-        expect((a.received.last as RoomError).reason, RoomErrorReason.roomExpired);
+        expect(
+          (a.received.last as RoomError).reason,
+          RoomErrorReason.roomExpired,
+        );
         expect(manager.roomCount, 0);
       });
     });

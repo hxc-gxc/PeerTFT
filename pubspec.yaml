@@ -31,8 +31,18 @@ melos:
         concurrency: 1
       packageFilters:
         dirExists: test
-      description: Run tests on every package that has one.
+        flutter: false
+      description: Run tests on pure-Dart packages.
+
+    test:flutter:
+      exec:
+        command: flutter test
+        concurrency: 1
+      packageFilters:
+        dirExists: test
+        flutter: true
+      description: Run tests on Flutter packages.
 
     format:
-      run: dart format --set-exit-if-changed .
+      exec: dart format --set-exit-if-changed .
       description: Check formatting across the whole workspace.

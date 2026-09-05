@@ -17,12 +17,19 @@ class SignalingClient {
 
   final WebSocketChannel _channel;
   late final Stream<SignalingMessage> messages = _channel.stream
-      .map((raw) => SignalingMessage.fromJson(jsonDecode(raw as String) as Map<String, dynamic>))
+      .map(
+        (raw) => SignalingMessage.fromJson(
+          jsonDecode(raw as String) as Map<String, dynamic>,
+        ),
+      )
       .asBroadcastStream();
 
   void joinRoom(String code) => _send(JoinRoom(code));
 
-  void sendRelay({required String targetPeerId, required WebRtcPayload payload}) {
+  void sendRelay({
+    required String targetPeerId,
+    required WebRtcPayload payload,
+  }) {
     _send(RelayMessage(targetPeerId: targetPeerId, payload: payload.encode()));
   }
 

@@ -29,7 +29,10 @@ void main() {
 
     test('accepts a well-formed code regardless of wordlist membership', () {
       const generator = CodeGenerator();
-      expect(generator.isWellFormed('motaleatoire-inconnu-du-dictionnaire'), isTrue);
+      expect(
+        generator.isWellFormed('motaleatoire-inconnu-du-dictionnaire'),
+        isTrue,
+      );
     });
   });
 }

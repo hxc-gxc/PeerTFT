@@ -13,8 +13,8 @@ class CodeGenerator {
     this.wordCount = 4,
     List<String> wordlist = frenchWordlist,
     Random? random,
-  })  : _wordlist = wordlist,
-        _providedRandom = random;
+  }) : _wordlist = wordlist,
+       _providedRandom = random;
 
   // A const constructor's initializer list can only reference compile-time
   // constants, so the default secure RNG is resolved lazily via [_random]

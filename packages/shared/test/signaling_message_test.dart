@@ -43,7 +43,10 @@ void main() {
 
     test('RelayMessage carries an opaque payload string untouched', () {
       const offer = Offer('v=0\r\no=- 1 1 IN IP4 0.0.0.0\r\n');
-      final relay = RelayMessage(targetPeerId: 'peer-b', payload: offer.encode());
+      final relay = RelayMessage(
+        targetPeerId: 'peer-b',
+        payload: offer.encode(),
+      );
       final decoded = SignalingMessage.fromJson(relay.toJson()) as RelayMessage;
       expect(decoded.targetPeerId, 'peer-b');
       expect(WebRtcPayload.decode(decoded.payload), isA<Offer>());

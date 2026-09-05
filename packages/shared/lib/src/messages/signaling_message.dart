@@ -69,8 +69,10 @@ final class PeerConnected extends SignalingMessage {
       PeerConnected(json['remotePeerId'] as String);
 
   @override
-  Map<String, dynamic> toJson() =>
-      {'type': 'peerConnected', 'remotePeerId': remotePeerId};
+  Map<String, dynamic> toJson() => {
+    'type': 'peerConnected',
+    'remotePeerId': remotePeerId,
+  };
 }
 
 /// Sent when the other peer's WebSocket closes before the handshake ends.
@@ -105,14 +107,14 @@ final class RelayMessage extends SignalingMessage {
   final String payload;
 
   factory RelayMessage.fromJson(Map<String, dynamic> json) => RelayMessage(
-        targetPeerId: json['targetPeerId'] as String,
-        payload: json['payload'] as String,
-      );
+    targetPeerId: json['targetPeerId'] as String,
+    payload: json['payload'] as String,
+  );
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'relay',
-        'targetPeerId': targetPeerId,
-        'payload': payload,
-      };
+    'type': 'relay',
+    'targetPeerId': targetPeerId,
+    'payload': payload,
+  };
 }

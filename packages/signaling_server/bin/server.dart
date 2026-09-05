@@ -14,7 +14,12 @@ import 'package:signaling_server/src/ws_handler.dart';
 /// Anonymous ICE-outcome events accepted by `POST /metrics` (see the
 /// architecture doc, section 10). No IP, room code or file identifier is
 /// ever accepted here -- only these four aggregate fields.
-const _allowedOutcomes = {'directSuccess', 'iceFailed', 'timeout', 'userCancelled'};
+const _allowedOutcomes = {
+  'directSuccess',
+  'iceFailed',
+  'timeout',
+  'userCancelled',
+};
 
 Future<void> main(List<String> args) async {
   final port = int.parse(Platform.environment['PORT'] ?? '8080');
@@ -25,24 +30,38 @@ Future<void> main(List<String> args) async {
       .addMiddleware(logRequests())
       .addHandler(_router(roomManager: roomManager, rateLimiter: rateLimiter));
 
-  final sweepTimer = Timer.periodic(const Duration(minutes: 1), (_) => rateLimiter.sweep());
+  final sweepTimer = Timer.periodic(
+    const Duration(minutes: 1),
+    (_) => rateLimiter.sweep(),
+  );
 
   final server = await shelf_io.serve(handler, InternetAddress.anyIPv4, port);
   // ignore: avoid_print
   print('signaling_server listening on ${server.address.host}:${server.port}');
 
-  ProcessSignal.sigterm.watch().listen((_) => _shutdown(server, roomManager, sweepTimer));
-  ProcessSignal.sigint.watch().listen((_) => _shutdown(server, roomManager, sweepTimer));
+  ProcessSignal.sigterm.watch().listen(
+    (_) => _shutdown(server, roomManager, sweepTimer),
+  );
+  ProcessSignal.sigint.watch().listen(
+    (_) => _shutdown(server, roomManager, sweepTimer),
+  );
 }
 
-Future<void> _shutdown(HttpServer server, RoomManager roomManager, Timer sweepTimer) async {
+Future<void> _shutdown(
+  HttpServer server,
+  RoomManager roomManager,
+  Timer sweepTimer,
+) async {
   sweepTimer.cancel();
   roomManager.dispose();
   await server.close(force: true);
   exit(0);
 }
 
-Handler _router({required RoomManager roomManager, required RateLimiter rateLimiter}) {
+Handler _router({
+  required RoomManager roomManager,
+  required RateLimiter rateLimiter,
+}) {
   return (Request request) {
     if (request.url.path == 'healthz') {
       return Response.ok('ok');
@@ -73,7 +92,8 @@ String _clientKey(Request request) {
   if (forwardedFor != null && forwardedFor.isNotEmpty) {
     return forwardedFor.split(',').first.trim();
   }
-  final connectionInfo = request.context['shelf.io.connection_info'] as HttpConnectionInfo?;
+  final connectionInfo =
+      request.context['shelf.io.connection_info'] as HttpConnectionInfo?;
   return connectionInfo?.remoteAddress.address ?? 'unknown';
 }
 
@@ -95,13 +115,17 @@ Future<Response> _handleMetrics(Request request) async {
 
   // Fire-and-forget structured log line; no per-user identifier is logged.
   // ignore: avoid_print
-  print(jsonEncode({
-    'event': 'ice_outcome',
-    'outcome': outcome,
-    'networkType': networkType is String ? networkType : null,
-    'candidateTypeUsed': candidateTypeUsed is String ? candidateTypeUsed : null,
-    'timestamp': DateTime.now().toUtc().toIso8601String(),
-  }));
+  print(
+    jsonEncode({
+      'event': 'ice_outcome',
+      'outcome': outcome,
+      'networkType': networkType is String ? networkType : null,
+      'candidateTypeUsed': candidateTypeUsed is String
+          ? candidateTypeUsed
+          : null,
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
+    }),
+  );
 
   return Response(204);
 }

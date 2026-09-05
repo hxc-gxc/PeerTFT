@@ -1,21 +1,21 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:shared/shared.dart';
 
 import '../metrics/connection_metrics.dart';
 
-/// Raw WebRTC handshake wrapper for the section-13 prototype: no
-/// application-layer encryption, no file chunking -- just Offer/Answer/ICE
-/// exchange and a single "hello" sent over the resulting DataChannel, plus
-/// enough instrumentation to classify the outcome (see [ConnectionOutcome]).
+/// WebRTC handshake wrapper: Offer/Answer/ICE exchange over the signaling
+/// server, then a DataChannel ready for chunked file transfer.
 ///
 /// Only STUN is configured. There is no TURN fallback: a failed ICE
 /// negotiation surfaces as [ConnectionOutcome.iceFailed] rather than being
 /// silently retried through a relay.
 class WebRtcConnection {
-  WebRtcConnection({required this.stunUri, this.timeout = const Duration(seconds: 20)});
+  WebRtcConnection({
+    required this.stunUri,
+    this.timeout = const Duration(seconds: 20),
+  });
 
   /// e.g. `stun:signaling.example.com:3478`.
   final String stunUri;
@@ -34,10 +34,14 @@ class WebRtcConnection {
   final _localPayloads = StreamController<WebRtcPayload>.broadcast();
   Stream<WebRtcPayload> get localPayloads => _localPayloads.stream;
 
-  /// Emits the text received on the DataChannel (just `"hello"` in this
-  /// prototype).
-  final _received = StreamController<String>.broadcast();
-  Stream<String> get received => _received.stream;
+  /// Emits every message received on the DataChannel (text and binary).
+  final _dataChannelMessages =
+      StreamController<RTCDataChannelMessage>.broadcast();
+  Stream<RTCDataChannelMessage> get dataChannelMessages =>
+      _dataChannelMessages.stream;
+
+  /// The negotiated DataChannel, available after ICE success.
+  RTCDataChannel? get dataChannel => _dataChannel;
 
   /// Completes once the ICE handshake reaches a terminal state.
   Future<ConnectionOutcome> get outcome => _outcomeCompleter.future;
@@ -69,11 +73,13 @@ class WebRtcConnection {
 
     pc.onIceCandidate = (RTCIceCandidate candidate) {
       if (candidate.candidate == null) return; // End-of-candidates marker.
-      _localPayloads.add(IceCandidate(
-        candidate: candidate.candidate!,
-        sdpMLineIndex: candidate.sdpMLineIndex ?? 0,
-        sdpMid: candidate.sdpMid,
-      ));
+      _localPayloads.add(
+        IceCandidate(
+          candidate: candidate.candidate!,
+          sdpMLineIndex: candidate.sdpMLineIndex ?? 0,
+          sdpMid: candidate.sdpMid,
+        ),
+      );
     };
 
     pc.onIceConnectionState = _onIceConnectionState;
@@ -86,34 +92,30 @@ class WebRtcConnection {
     if (pc == null) return;
     switch (payload) {
       case Offer():
-        await pc.setRemoteDescription(RTCSessionDescription(payload.sdp, 'offer'));
+        await pc.setRemoteDescription(
+          RTCSessionDescription(payload.sdp, 'offer'),
+        );
         final answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         _localPayloads.add(Answer(answer.sdp ?? ''));
       case Answer():
-        await pc.setRemoteDescription(RTCSessionDescription(payload.sdp, 'answer'));
+        await pc.setRemoteDescription(
+          RTCSessionDescription(payload.sdp, 'answer'),
+        );
       case IceCandidate():
-        await pc.addCandidate(RTCIceCandidate(
-          payload.candidate,
-          payload.sdpMid,
-          payload.sdpMLineIndex,
-        ));
+        await pc.addCandidate(
+          RTCIceCandidate(
+            payload.candidate,
+            payload.sdpMid,
+            payload.sdpMLineIndex,
+          ),
+        );
     }
-  }
-
-  void sendHello() {
-    _dataChannel?.send(RTCDataChannelMessage(jsonEncode({'type': 'hello'})));
   }
 
   void _bindDataChannel(RTCDataChannel channel) {
     _dataChannel = channel;
-    channel.onMessage = (RTCDataChannelMessage message) {
-      if (message.isBinary) return;
-      final decoded = jsonDecode(message.text) as Map<String, dynamic>;
-      if (decoded['type'] == 'hello') {
-        _received.add('hello');
-      }
-    };
+    channel.onMessage = _dataChannelMessages.add;
   }
 
   void _onIceConnectionState(RTCIceConnectionState state) {
@@ -174,6 +176,6 @@ class WebRtcConnection {
     await _dataChannel?.close();
     await _pc?.close();
     await _localPayloads.close();
-    await _received.close();
+    await _dataChannelMessages.close();
   }
 }

@@ -13,7 +13,7 @@ enum RoomErrorReason {
   rateLimited;
 
   static RoomErrorReason fromWire(String value) => values.firstWhere(
-        (reason) => reason.name == value,
-        orElse: () => throw FormatException('Unknown RoomErrorReason: $value'),
-      );
+    (reason) => reason.name == value,
+    orElse: () => throw FormatException('Unknown RoomErrorReason: $value'),
+  );
 }

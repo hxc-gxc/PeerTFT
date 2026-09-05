@@ -67,16 +67,16 @@ final class IceCandidate extends WebRtcPayload {
   final String? sdpMid;
 
   factory IceCandidate.fromJson(Map<String, dynamic> json) => IceCandidate(
-        candidate: json['candidate'] as String,
-        sdpMLineIndex: json['sdpMLineIndex'] as int,
-        sdpMid: json['sdpMid'] as String?,
-      );
+    candidate: json['candidate'] as String,
+    sdpMLineIndex: json['sdpMLineIndex'] as int,
+    sdpMid: json['sdpMid'] as String?,
+  );
 
   @override
   Map<String, dynamic> toJson() => {
-        'kind': 'iceCandidate',
-        'candidate': candidate,
-        'sdpMLineIndex': sdpMLineIndex,
-        'sdpMid': sdpMid,
-      };
+    'kind': 'iceCandidate',
+    'candidate': candidate,
+    'sdpMLineIndex': sdpMLineIndex,
+    'sdpMid': sdpMid,
+  };
 }
