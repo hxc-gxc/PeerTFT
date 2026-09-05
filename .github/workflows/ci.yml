@@ -88,9 +88,6 @@ jobs:
         run: dart pub global activate melos 8.6.0
       - name: Bootstrap
         run: melos bootstrap
-      - name: Create Android project files
-        working-directory: packages/app
-        run: flutter create --platforms=android .
       - name: Build APK
         working-directory: packages/app
         run: flutter build apk --debug
