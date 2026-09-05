@@ -17,6 +17,9 @@ packages/app/macos/
 packages/app/linux/
 packages/app/windows/
 
+# Entitlements are hand-edited, not regenerated — track them
+!packages/app/macos/Runner/*.entitlements
+
 # IDE
 .idea/
 .vscode/
@@ -24,3 +27,9 @@ packages/app/windows/
 
 # OS
 .DS_Store
+
+# Secrets
+.env.local
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

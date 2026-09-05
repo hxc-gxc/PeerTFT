@@ -5,8 +5,15 @@ WORKDIR /app
 # Copy the whole monorepo context so the `shared` path dependency resolves;
 # see docker-compose.yml, which sets this Dockerfile's build context to the
 # repository root.
+COPY pubspec.yaml ./pubspec.yaml
 COPY packages/shared ./packages/shared
 COPY packages/signaling_server ./packages/signaling_server
+
+# The root pubspec.yaml references packages/app (a Flutter package not needed
+# in the server image). Rewrite the workspace list to only include the
+# packages actually present, so `dart pub get` resolves without the app.
+RUN sed -i '/- packages\/app/d' pubspec.yaml
+
 WORKDIR /app/packages/signaling_server
 
 RUN dart pub get

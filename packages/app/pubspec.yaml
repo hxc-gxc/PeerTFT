@@ -7,9 +7,10 @@ description: >
   polish, no crypto -- see the top-level README for what's next.
 version: 0.1.0
 publish_to: none
+resolution: workspace
 
 environment:
-  sdk: ^3.4.0
+  sdk: ^3.12.2
   flutter: ">=3.24.0"
 
 dependencies:

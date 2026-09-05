@@ -5,9 +5,10 @@ description: >
   verbatim; it never sees file content and keeps no persistent storage.
 version: 0.1.0
 publish_to: none
+resolution: workspace
 
 environment:
-  sdk: ^3.4.0
+  sdk: ^3.12.2
 
 dependencies:
   shared:
