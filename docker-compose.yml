@@ -1,0 +1,44 @@
+# Single-VPS deployment: zero GAFAM services, no file storage anywhere.
+#
+# - signaling: stateless WebSocket room-matching relay (packages/signaling_server)
+# - stun:      self-hosted STUN only (coturn --stun-only) for NAT traversal
+# - caddy:     reverse proxy + automatic Let's Encrypt TLS in front of signaling
+#
+# There is deliberately no TURN service here: a TURN relay would carry file
+# bytes across this VPS, which contradicts the "no server ever sees file
+# content" principle. A failed P2P handshake surfaces as an explicit error in
+# the client instead of silently falling back to a relay.
+services:
+  signaling:
+    build:
+      context: .
+      dockerfile: packages/signaling_server/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+    expose:
+      - "8080"
+
+  stun:
+    image: coturn/coturn:latest
+    restart: unless-stopped
+    command: ["-n", "--stun-only", "--listening-port=3478"]
+    ports:
+      - "3478:3478/udp"
+
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - signaling
+
+volumes:
+  caddy_data:
+  caddy_config:

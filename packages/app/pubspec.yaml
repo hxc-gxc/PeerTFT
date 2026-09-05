@@ -1,0 +1,31 @@
+name: app
+description: >
+  PeerTFT client. Current scope is the throwaway prototype from the
+  architecture doc, section 13: join a room, complete a raw WebRTC
+  handshake (no application-layer encryption yet), exchange a "hello" over
+  the data channel, and report the ICE outcome. No file chunking, no UI
+  polish, no crypto -- see the top-level README for what's next.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.4.0
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared:
+    path: ../shared
+  flutter_webrtc: ^0.11.7
+  web_socket_channel: ^3.0.1
+  http: ^1.2.2
+  connectivity_plus: ^6.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

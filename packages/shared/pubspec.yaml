@@ -1,0 +1,16 @@
+name: shared
+description: >
+  Messages, connection codes and other types shared between the signaling
+  server and the Flutter app. Pure Dart, no Flutter dependency.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  meta: ^1.15.0
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
