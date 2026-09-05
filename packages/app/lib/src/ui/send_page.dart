@@ -37,7 +37,8 @@ class _SendPageState extends ConsumerState<SendPage> {
         child: switch (state) {
           Idle() => _pickFileView(context),
           Connecting() => const Center(child: CircularProgressIndicator()),
-          WaitingForPeer(:final code) => _waitingView(code),
+          WaitingForPeer(:final code) => _waitingView(context, code),
+          Failed(:final message) => _failedView(context, message),
           _ => const Center(child: CircularProgressIndicator()),
         },
       ),
@@ -59,7 +60,7 @@ class _SendPageState extends ConsumerState<SendPage> {
     );
   }
 
-  Widget _waitingView(String code) {
+  Widget _waitingView(BuildContext context, String code) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -77,7 +78,36 @@ class _SendPageState extends ConsumerState<SendPage> {
           'En attente du récepteur…',
           style: TextStyle(fontSize: 14, color: Colors.grey),
         ),
+        const SizedBox(height: 24),
+        TextButton(
+          onPressed: () {
+            ref.read(transferSessionProvider.notifier).cancel();
+            setState(() => _started = false);
+          },
+          child: const Text('Annuler'),
+        ),
       ],
+    );
+  }
+
+  Widget _failedView(BuildContext context, String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+          const SizedBox(height: 16),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: () {
+              ref.read(transferSessionProvider.notifier).cancel();
+              setState(() => _started = false);
+            },
+            child: const Text('Réessayer'),
+          ),
+        ],
+      ),
     );
   }
 

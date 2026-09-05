@@ -41,6 +41,7 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
           Idle() => _enterCodeView(context),
           Connecting() => const Center(child: CircularProgressIndicator()),
           WaitingForPeer(:final code) => _waitingView(code),
+          Failed(:final message) => _failedView(context, message),
           _ => const Center(child: CircularProgressIndicator()),
         },
       ),
@@ -85,7 +86,36 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
           'En attente de l\'émetteur…',
           style: TextStyle(fontSize: 14, color: Colors.grey),
         ),
+        const SizedBox(height: 24),
+        TextButton(
+          onPressed: () {
+            ref.read(transferSessionProvider.notifier).cancel();
+            setState(() => _started = false);
+          },
+          child: const Text('Annuler'),
+        ),
       ],
+    );
+  }
+
+  Widget _failedView(BuildContext context, String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+          const SizedBox(height: 16),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: () {
+              ref.read(transferSessionProvider.notifier).cancel();
+              setState(() => _started = false);
+            },
+            child: const Text('Réessayer'),
+          ),
+        ],
+      ),
     );
   }
 

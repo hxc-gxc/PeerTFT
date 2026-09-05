@@ -141,7 +141,19 @@ class TransferSession extends Notifier<TransferState> {
 
     final signaling = SignalingClient.connect(_signalingWsUri);
     _signaling = signaling;
-    _signalingSub = signaling.messages.listen(_onSignalingMessage);
+    _signalingSub = signaling.messages.listen(
+      _onSignalingMessage,
+      onError: (_) {
+        state = const Failed('Connexion au serveur perdue.');
+        unawaited(_cancelInternal());
+      },
+      onDone: () {
+        if (state is WaitingForPeer || state is Connecting) {
+          state = const Failed('Connexion au serveur perdue.');
+          unawaited(_cancelInternal());
+        }
+      },
+    );
     signaling.joinRoom(code);
   }
 
