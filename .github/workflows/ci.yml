@@ -187,11 +187,7 @@ jobs:
         run: flutter create --platforms=windows .
       - name: Build Windows
         working-directory: packages/app
-        run: |
-          flutter build windows \
-            --dart-define=SIGNALING_WS_URL=wss://signal.noredflag.fr/ws \
-            --dart-define=SIGNALING_HTTP_URL=https://signal.noredflag.fr \
-            --dart-define=STUN_URL=stun:signal.noredflag.fr:3478
+        run: flutter build windows --dart-define=SIGNALING_WS_URL=wss://signal.noredflag.fr/ws --dart-define=SIGNALING_HTTP_URL=https://signal.noredflag.fr --dart-define=STUN_URL=stun:signal.noredflag.fr:3478
       - uses: actions/upload-artifact@v4
         with:
           name: windows-build
