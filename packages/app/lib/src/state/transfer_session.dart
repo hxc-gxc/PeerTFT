@@ -87,9 +87,22 @@ class TransferSession extends Notifier<TransferState> {
   String? _filePath;
   String? _code;
 
-  static final _signalingWsUri = Uri.parse('ws://localhost:8080/ws');
-  static final _signalingHttpUri = Uri.parse('http://localhost:8080');
-  static const _stunUri = 'stun:localhost:3478';
+  static final _signalingWsUri = Uri.parse(
+    const String.fromEnvironment(
+      'SIGNALING_WS_URL',
+      defaultValue: 'ws://localhost:8080/ws',
+    ),
+  );
+  static final _signalingHttpUri = Uri.parse(
+    const String.fromEnvironment(
+      'SIGNALING_HTTP_URL',
+      defaultValue: 'http://localhost:8080',
+    ),
+  );
+  static const _stunUri = String.fromEnvironment(
+    'STUN_URL',
+    defaultValue: 'stun:localhost:3478',
+  );
 
   Future<void> startSend(String filePath) async {
     await _beginSession(
@@ -289,11 +302,11 @@ class TransferSession extends Notifier<TransferState> {
   }
 
   Future<String?> _pickSavePath(String fileName) async {
-    final result = await FilePicker.platform.saveFile(
-      dialogTitle: 'Enregistrer le fichier',
-      fileName: fileName,
+    final dir = await FilePicker.getDirectoryPath(
+      dialogTitle: 'Choisir le dossier de destination',
     );
-    return result;
+    if (dir == null) return null;
+    return '$dir${Platform.pathSeparator}$fileName';
   }
 
   Future<void> cancel() async {
