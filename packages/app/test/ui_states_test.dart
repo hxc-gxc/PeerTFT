@@ -37,14 +37,17 @@ Widget _app(Widget page, TransferState initialState) => ProviderScope(
 
 void main() {
   group('SendPage', () {
-    testWidgets('Failed state: shows error message and Réessayer button, no spinner', (tester) async {
-      await tester.pumpWidget(_app(const SendPage(), const Failed('oops')));
-      await tester.pump();
+    testWidgets(
+      'Failed state: shows error message and Réessayer button, no spinner',
+      (tester) async {
+        await tester.pumpWidget(_app(const SendPage(), const Failed('oops')));
+        await tester.pump();
 
-      expect(find.text('oops'), findsOneWidget);
-      expect(find.text('Réessayer'), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-    });
+        expect(find.text('oops'), findsOneWidget);
+        expect(find.text('Réessayer'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      },
+    );
 
     testWidgets('WaitingForPeer state: shows cancel button', (tester) async {
       await tester.pumpWidget(
@@ -70,16 +73,19 @@ void main() {
   });
 
   group('ReceivePage', () {
-    testWidgets('Failed state: shows error message and Réessayer button, no spinner', (tester) async {
-      await tester.pumpWidget(
-        _app(const ReceivePage(), const Failed('connexion perdue')),
-      );
-      await tester.pump();
+    testWidgets(
+      'Failed state: shows error message and Réessayer button, no spinner',
+      (tester) async {
+        await tester.pumpWidget(
+          _app(const ReceivePage(), const Failed('connexion perdue')),
+        );
+        await tester.pump();
 
-      expect(find.text('connexion perdue'), findsOneWidget);
-      expect(find.text('Réessayer'), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-    });
+        expect(find.text('connexion perdue'), findsOneWidget);
+        expect(find.text('Réessayer'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      },
+    );
 
     testWidgets('WaitingForPeer state: shows cancel button', (tester) async {
       await tester.pumpWidget(

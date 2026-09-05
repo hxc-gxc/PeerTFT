@@ -27,6 +27,8 @@ class WebRtcConnection {
   DateTime? _startedAt;
   DateTime? _decidedAt;
   final _outcomeCompleter = Completer<ConnectionOutcome>();
+  // Completes when the DataChannel is bound (may lag ICE Connected on receiver).
+  final _dataChannelCompleter = Completer<RTCDataChannel?>();
 
   /// Emits every locally-generated payload (the offer/answer once, then one
   /// event per gathered ICE candidate) that the caller must relay to the
@@ -42,6 +44,11 @@ class WebRtcConnection {
 
   /// The negotiated DataChannel, available after ICE success.
   RTCDataChannel? get dataChannel => _dataChannel;
+
+  /// Waits up to 5 s for the DataChannel to be bound.
+  /// On the receiver side onDataChannel can arrive slightly after ICE Connected.
+  Future<RTCDataChannel?> get dataChannelReady => _dataChannelCompleter.future
+      .timeout(const Duration(seconds: 5), onTimeout: () => null);
 
   /// Completes once the ICE handshake reaches a terminal state.
   Future<ConnectionOutcome> get outcome => _outcomeCompleter.future;
@@ -119,6 +126,9 @@ class WebRtcConnection {
   void _bindDataChannel(RTCDataChannel channel) {
     _dataChannel = channel;
     channel.onMessage = _dataChannelMessages.add;
+    if (!_dataChannelCompleter.isCompleted) {
+      _dataChannelCompleter.complete(channel);
+    }
   }
 
   void _onIceConnectionState(RTCIceConnectionState state) {

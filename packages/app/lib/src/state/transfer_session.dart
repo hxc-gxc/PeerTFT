@@ -210,12 +210,15 @@ class TransferSession extends Notifier<TransferState> {
     );
 
     if (outcome != ConnectionOutcome.directSuccess) {
-      state = const Failed('Connexion directe impossible sur ce réseau.');
+      final msg = outcome == ConnectionOutcome.timeout
+          ? 'Connexion expirée (pas de réponse ICE).'
+          : 'Connexion directe impossible sur ce réseau.';
+      state = Failed(msg);
       await _cancelInternal();
       return;
     }
 
-    final channel = webrtc.dataChannel;
+    final channel = await webrtc.dataChannelReady;
     if (channel == null) {
       state = const Failed('Canal de données indisponible.');
       return;

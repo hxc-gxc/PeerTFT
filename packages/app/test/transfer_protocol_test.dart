@@ -103,7 +103,8 @@ void main() {
 
     test('receiver returns null when save-path dialog is cancelled', () async {
       final (:sender, :receiver) = _makePipe(
-        savePathProvider: (_) async => null, // simulates user dismissing the picker
+        savePathProvider: (_) async =>
+            null, // simulates user dismissing the picker
       );
       final bytes = Uint8List.fromList([1, 2, 3]);
 
