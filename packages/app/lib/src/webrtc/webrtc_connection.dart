@@ -72,7 +72,9 @@ class WebRtcConnection {
     }
 
     pc.onIceCandidate = (RTCIceCandidate candidate) {
-      if (candidate.candidate == null) return; // End-of-candidates marker.
+      // Browsers signal end-of-candidates with "" (empty string); native with null.
+      final c = candidate.candidate;
+      if (c == null || c.isEmpty) return;
       _localPayloads.add(
         IceCandidate(
           candidate: candidate.candidate!,
@@ -103,6 +105,7 @@ class WebRtcConnection {
           RTCSessionDescription(payload.sdp, 'answer'),
         );
       case IceCandidate():
+        if (payload.candidate.isEmpty) break;
         await pc.addCandidate(
           RTCIceCandidate(
             payload.candidate,
