@@ -1,6 +1,6 @@
 # packages/app/Dockerfile.web
 # Build context must be the repo root so packages/shared path-dep resolves.
-FROM ghcr.io/cirruslabs/flutter:stable AS build
+FROM ghcr.io/cirruslabs/flutter:3.44.6 AS build
 WORKDIR /app
 COPY pubspec.yaml ./pubspec.yaml
 COPY packages/shared ./packages/shared
