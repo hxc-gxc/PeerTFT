@@ -81,11 +81,9 @@ class _SendPageState extends ConsumerState<SendPage> {
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles();
-    if (result == null || result.files.single.path == null) return;
+    final files = await FilePicker.pickFiles();
+    if (files.isEmpty || files.single.path == null) return;
     _started = true;
-    ref
-        .read(transferSessionProvider.notifier)
-        .startSend(result.files.single.path!);
+    ref.read(transferSessionProvider.notifier).startSend(files.single.path!);
   }
 }

@@ -302,11 +302,11 @@ class TransferSession extends Notifier<TransferState> {
   }
 
   Future<String?> _pickSavePath(String fileName) async {
-    final result = await FilePicker.platform.saveFile(
-      dialogTitle: 'Enregistrer le fichier',
-      fileName: fileName,
+    final dir = await FilePicker.getDirectoryPath(
+      dialogTitle: 'Choisir le dossier de destination',
     );
-    return result;
+    if (dir == null) return null;
+    return '$dir${Platform.pathSeparator}$fileName';
   }
 
   Future<void> cancel() async {
