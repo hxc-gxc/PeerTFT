@@ -10,6 +10,7 @@
 services:
   signaling:
     image: ghcr.io/hxc-gxc/peertft-signaling:latest
+    pull_policy: always
     restart: unless-stopped
     environment:
       PORT: "8080"
@@ -18,6 +19,7 @@ services:
 
   web:
     image: ghcr.io/hxc-gxc/peertft-web:latest
+    pull_policy: always
     restart: unless-stopped
     expose:
       - "80"
