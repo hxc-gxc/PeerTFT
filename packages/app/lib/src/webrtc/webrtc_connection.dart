@@ -29,6 +29,10 @@ class WebRtcConnection {
   final _outcomeCompleter = Completer<ConnectionOutcome>();
   // Completes when the DataChannel is bound (may lag ICE Connected on receiver).
   final _dataChannelCompleter = Completer<RTCDataChannel?>();
+  // Trickle-ICE buffering: candidates received before setRemoteDescription
+  // completes are queued and flushed once the remote description is set.
+  bool _remoteDescriptionSet = false;
+  final _pendingCandidates = <RTCIceCandidate>[];
 
   /// Emits every locally-generated payload (the offer/answer once, then one
   /// event per gathered ICE candidate) that the caller must relay to the
@@ -104,6 +108,8 @@ class WebRtcConnection {
         await pc.setRemoteDescription(
           RTCSessionDescription(payload.sdp, 'offer'),
         );
+        _remoteDescriptionSet = true;
+        await _flushPendingCandidates(pc);
         final answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         _localPayloads.add(Answer(answer.sdp ?? ''));
@@ -111,16 +117,28 @@ class WebRtcConnection {
         await pc.setRemoteDescription(
           RTCSessionDescription(payload.sdp, 'answer'),
         );
+        _remoteDescriptionSet = true;
+        await _flushPendingCandidates(pc);
       case IceCandidate():
         if (payload.candidate.isEmpty) break;
-        await pc.addCandidate(
-          RTCIceCandidate(
-            payload.candidate,
-            payload.sdpMid,
-            payload.sdpMLineIndex,
-          ),
+        final candidate = RTCIceCandidate(
+          payload.candidate,
+          payload.sdpMid,
+          payload.sdpMLineIndex,
         );
+        if (_remoteDescriptionSet) {
+          await pc.addCandidate(candidate);
+        } else {
+          _pendingCandidates.add(candidate);
+        }
     }
+  }
+
+  Future<void> _flushPendingCandidates(RTCPeerConnection pc) async {
+    for (final candidate in _pendingCandidates) {
+      await pc.addCandidate(candidate);
+    }
+    _pendingCandidates.clear();
   }
 
   void _bindDataChannel(RTCDataChannel channel) {
