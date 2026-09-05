@@ -4,8 +4,6 @@
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
-pubspec.lock
-
 # Melos
 .melos_tool/
 
