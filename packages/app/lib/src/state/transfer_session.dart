@@ -1,12 +1,16 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:shared/shared.dart';
 
 import '../metrics/connection_metrics.dart';
+import '../platform/web_download_stub.dart'
+    if (dart.library.html) '../platform/web_download_web.dart';
 import '../signaling/signaling_client.dart';
 import '../transfer/transfer.dart';
 import '../webrtc/webrtc_connection.dart';
@@ -85,6 +89,10 @@ class TransferSession extends Notifier<TransferState> {
   StreamSubscription<WebRtcPayload>? _localPayloadsSub;
   bool _isInitiator = false;
   String? _filePath;
+  // Web: in-memory file data.
+  Uint8List? _fileBytes;
+  String? _fileName;
+  int? _fileSize;
   String? _code;
 
   static final _signalingWsUri = Uri.parse(
@@ -104,12 +112,18 @@ class TransferSession extends Notifier<TransferState> {
     defaultValue: 'stun:localhost:3478',
   );
 
-  Future<void> startSend(String filePath) async {
+  Future<void> startSend(PlatformFile platformFile) async {
     await _beginSession(
       code: const CodeGenerator().generate(),
       isInitiator: true,
     );
-    _filePath = filePath;
+    if (kIsWeb) {
+      _fileBytes = await platformFile.readAsBytes();
+      _fileName = platformFile.name;
+      _fileSize = await platformFile.length();
+    } else {
+      _filePath = platformFile.path;
+    }
   }
 
   Future<void> startReceive(String code) async {
@@ -234,35 +248,54 @@ class TransferSession extends Notifier<TransferState> {
     RTCDataChannel channel,
     Stream<RTCDataChannelMessage> messages,
   ) async {
-    final filePath = _filePath;
-    if (filePath == null) {
-      state = const Failed('Aucun fichier sélectionné.');
-      return;
-    }
-    final file = File(filePath);
-    final fileName = file.uri.pathSegments.last;
-    final fileSize = await file.length();
-
-    state = Transferring(
-      fileName: fileName,
-      totalBytes: fileSize,
-      transferredBytes: 0,
-    );
-
     final sender = FileSender(
       channel,
       messages,
       onProgress: (bytes) {
-        _onProgress(fileName, fileSize, bytes);
+        _onProgress(_fileName ?? '', _fileSize ?? 0, bytes);
       },
     );
+
     try {
-      final result = await sender.send(file);
-      state = Complete(
-        sha256Sent: result.sha256Hex,
-        sha256Received: result.sha256Hex,
-        hashMatch: true,
-      );
+      if (kIsWeb) {
+        final bytes = _fileBytes;
+        final name = _fileName;
+        if (bytes == null || name == null) {
+          state = const Failed('Aucun fichier sélectionné.');
+          return;
+        }
+        state = Transferring(
+          fileName: name,
+          totalBytes: bytes.length,
+          transferredBytes: 0,
+        );
+        final result = await sender.sendBytes(name, bytes);
+        state = Complete(
+          sha256Sent: result.sha256Hex,
+          sha256Received: result.sha256Hex,
+          hashMatch: true,
+        );
+      } else {
+        final filePath = _filePath;
+        if (filePath == null) {
+          state = const Failed('Aucun fichier sélectionné.');
+          return;
+        }
+        final file = File(filePath);
+        final fileName = file.uri.pathSegments.last;
+        final fileSize = await file.length();
+        state = Transferring(
+          fileName: fileName,
+          totalBytes: fileSize,
+          transferredBytes: 0,
+        );
+        final result = await sender.send(file);
+        state = Complete(
+          sha256Sent: result.sha256Hex,
+          sha256Received: result.sha256Hex,
+          hashMatch: true,
+        );
+      }
     } catch (e) {
       state = Failed('Erreur d\'envoi: $e');
     }
@@ -272,10 +305,11 @@ class TransferSession extends Notifier<TransferState> {
     RTCDataChannel channel,
     Stream<RTCDataChannelMessage> messages,
   ) async {
+    // On web: null savePathProvider → buffer bytes in memory, then download.
     final receiver = FileReceiver(
       channel,
       messages,
-      _pickSavePath,
+      kIsWeb ? null : _pickSavePath,
       onProgress: (bytes) {
         final s = state;
         if (s is Transferring) {
@@ -286,9 +320,11 @@ class TransferSession extends Notifier<TransferState> {
     try {
       final result = await receiver.receive();
       if (result == null) {
-        // User cancelled the save dialog.
         state = const Idle();
         return;
+      }
+      if (kIsWeb && result.bytes != null) {
+        await webDownload(result.fileName ?? 'fichier', result.bytes!);
       }
       state = Complete(
         savedPath: result.savedPath,
@@ -324,6 +360,9 @@ class TransferSession extends Notifier<TransferState> {
     await _signaling?.close();
     _signaling = null;
     _filePath = null;
+    _fileBytes = null;
+    _fileName = null;
+    _fileSize = null;
     _code = null;
     _throughputWindow.clear();
   }

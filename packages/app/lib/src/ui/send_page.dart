@@ -1,4 +1,5 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -81,9 +82,11 @@ class _SendPageState extends ConsumerState<SendPage> {
   }
 
   Future<void> _pickFile() async {
-    final files = await FilePicker.pickFiles();
-    if (files.isEmpty || files.single.path == null) return;
+    final files = await FilePicker.pickFiles(withData: kIsWeb);
+    if (files.isEmpty) return;
+    final file = files.single;
+    if (!kIsWeb && file.path == null) return;
     _started = true;
-    ref.read(transferSessionProvider.notifier).startSend(files.single.path!);
+    ref.read(transferSessionProvider.notifier).startSend(file);
   }
 }

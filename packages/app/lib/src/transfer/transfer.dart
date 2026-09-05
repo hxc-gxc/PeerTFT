@@ -19,9 +19,13 @@ class ReceiveResult {
     this.savedPath,
     this.sha256Sent,
     this.sha256Received,
-    this.hashMatch,
-  );
-  final String savedPath;
+    this.hashMatch, {
+    this.bytes,
+    this.fileName,
+  });
+  final String? savedPath; // null on web
+  final Uint8List? bytes; // populated on web
+  final String? fileName; // populated on web
   final String sha256Sent;
   final String sha256Received;
   final bool hashMatch;
@@ -78,6 +82,30 @@ class FileSender {
     return SendResult(hashHex, bytesSent);
   }
 
+  /// Web path: send from in-memory bytes (no filesystem access).
+  Future<SendResult> sendBytes(String name, Uint8List bytes) async {
+    _sendJson({'type': 'file-meta', 'name': name, 'size': bytes.length});
+
+    final ack = await _waitForAck();
+    if (!ack) throw Exception('Transfer rejected by receiver');
+
+    final sha256 = _Sha256Sink();
+    var bytesSent = 0;
+
+    while (bytesSent < bytes.length) {
+      final end = (bytesSent + _chunkSize).clamp(0, bytes.length);
+      final chunk = bytes.sublist(bytesSent, end);
+      sha256.add(chunk);
+      await _sendWithBackpressure(chunk);
+      bytesSent = end;
+      onProgress?.call(bytesSent);
+    }
+
+    final hashHex = sha256.hexDigest();
+    _sendJson({'type': 'file-end', 'sha256': hashHex});
+    return SendResult(hashHex, bytesSent);
+  }
+
   Future<bool> _waitForAck() async {
     // ponytail: timeout is generous; if the peer is slow to respond we'd
     // rather wait than fail prematurely.
@@ -111,28 +139,41 @@ class FileReceiver {
   FileReceiver(
     this._channel,
     this._messages,
+    // null = web mode: buffer bytes in memory instead of writing to disk.
     this.savePathProvider, {
     this.onProgress,
   });
 
   final RTCDataChannel _channel;
   final Stream<RTCDataChannelMessage> _messages;
-  final Future<String?> Function(String fileName) savePathProvider;
+  final Future<String?> Function(String fileName)? savePathProvider;
   final void Function(int bytesReceived)? onProgress;
 
   Future<ReceiveResult?> receive() async {
     final meta = await _waitForMeta();
     if (meta == null) return null;
+    final fileName = meta['name'] as String;
 
-    final savePath = await savePathProvider(meta['name'] as String);
-    if (savePath == null) {
-      _sendJson({'type': 'file-reject'});
-      return null;
+    final webMode = savePathProvider == null;
+    String? savePath;
+
+    if (!webMode) {
+      savePath = await savePathProvider!(fileName);
+      if (savePath == null) {
+        _sendJson({'type': 'file-reject'});
+        return null;
+      }
     }
 
     _sendJson({'type': 'file-ack'});
 
-    final sink = File(savePath).openWrite();
+    IOSink? sink;
+    BytesBuilder? bytesBuilder;
+    if (webMode) {
+      bytesBuilder = BytesBuilder(copy: false);
+    } else {
+      sink = File(savePath!).openWrite();
+    }
     final sha256 = _Sha256Sink();
     String? receivedHash;
     var bytesReceived = 0;
@@ -140,7 +181,8 @@ class FileReceiver {
     await for (final msg in _messages) {
       if (msg.isBinary) {
         final data = msg.binary;
-        sink.add(data);
+        sink?.add(data);
+        bytesBuilder?.add(data);
         sha256.add(data);
         bytesReceived += data.length;
         onProgress?.call(bytesReceived);
@@ -153,13 +195,23 @@ class FileReceiver {
       }
     }
 
-    await sink.flush();
-    await sink.close();
+    await sink?.flush();
+    await sink?.close();
 
     final computed = sha256.hexDigest();
     final hashMatch = receivedHash == computed;
 
-    return ReceiveResult(savePath, receivedHash ?? '', computed, hashMatch);
+    if (webMode) {
+      return ReceiveResult(
+        null,
+        receivedHash ?? '',
+        computed,
+        hashMatch,
+        bytes: bytesBuilder!.takeBytes(),
+        fileName: fileName,
+      );
+    }
+    return ReceiveResult(savePath!, receivedHash ?? '', computed, hashMatch);
   }
 
   Future<Map<String, dynamic>?> _waitForMeta() async {
