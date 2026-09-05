@@ -184,7 +184,7 @@ Replaces `.github/workflows/ci.yml`. Triggers: `push` to `main`, `pull_request`.
     sudo apt-get update
     sudo apt-get install -y \
       clang cmake ninja-build pkg-config \
-      libgtk-3-dev libwebkit2gtk-4.1-dev \
+      libgtk-3-dev libwebkit2gtk-4.0-dev \
       liblzma-dev libstdc++-12-dev
 ```
 
