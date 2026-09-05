@@ -144,7 +144,14 @@ class WebRtcConnection {
   void _bindDataChannel(RTCDataChannel channel) {
     _dataChannel = channel;
     channel.onMessage = _dataChannelMessages.add;
-    if (!_dataChannelCompleter.isCompleted) {
+    channel.onDataChannelState = (state) {
+      if (state == RTCDataChannelState.RTCDataChannelOpen &&
+          !_dataChannelCompleter.isCompleted) {
+        _dataChannelCompleter.complete(channel);
+      }
+    };
+    if (channel.state == RTCDataChannelState.RTCDataChannelOpen &&
+        !_dataChannelCompleter.isCompleted) {
       _dataChannelCompleter.complete(channel);
     }
   }

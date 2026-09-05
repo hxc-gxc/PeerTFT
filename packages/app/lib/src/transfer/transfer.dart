@@ -120,12 +120,21 @@ class FileSender {
   Future<void> _sendWithBackpressure(Uint8List data) async {
     // ponytail: poll-based backpressure; fine for single-file transfer.
     while ((_channel.bufferedAmount ?? 0) > _bufferHighWatermark) {
+      if (_channel.state != RTCDataChannelState.RTCDataChannelOpen) {
+        throw Exception('Canal de données fermé pendant le transfert.');
+      }
       await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    if (_channel.state != RTCDataChannelState.RTCDataChannelOpen) {
+      throw Exception('Canal de données fermé avant l\'envoi.');
     }
     _channel.send(RTCDataChannelMessage.fromBinary(data));
   }
 
   void _sendJson(Map<String, dynamic> json) {
+    if (_channel.state != RTCDataChannelState.RTCDataChannelOpen) {
+      throw Exception('Canal de données non ouvert (état: ${_channel.state}).');
+    }
     _channel.send(RTCDataChannelMessage(jsonEncode(json)));
   }
 }
@@ -223,6 +232,9 @@ class FileReceiver {
   }
 
   void _sendJson(Map<String, dynamic> json) {
+    if (_channel.state != RTCDataChannelState.RTCDataChannelOpen) {
+      throw Exception('Canal de données non ouvert (état: ${_channel.state}).');
+    }
     _channel.send(RTCDataChannelMessage(jsonEncode(json)));
   }
 }

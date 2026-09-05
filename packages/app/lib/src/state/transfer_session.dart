@@ -232,6 +232,8 @@ class TransferSession extends Notifier<TransferState> {
   }
 
   final _throughputWindow = <_ThroughputSample>[];
+  Timer? _stallTimer;
+  int _lastTransferred = 0;
 
   void _onProgress(String fileName, int totalBytes, int transferred) {
     final now = DateTime.now();
@@ -257,6 +259,18 @@ class TransferSession extends Notifier<TransferState> {
             transferredBytes: 0,
           );
     state = current.copyWith(transferredBytes: transferred, throughputBps: bps);
+
+    if (transferred != _lastTransferred) {
+      _lastTransferred = transferred;
+      _stallTimer?.cancel();
+      _stallTimer = Timer(const Duration(seconds: 30), () {
+        if (state is Transferring) {
+          state = const Failed(
+            'Transfert bloqué — aucune progression depuis 30 secondes.',
+          );
+        }
+      });
+    }
   }
 
   Future<void> _runSender(
@@ -366,6 +380,8 @@ class TransferSession extends Notifier<TransferState> {
   }
 
   Future<void> _cancelInternal() async {
+    _stallTimer?.cancel();
+    _stallTimer = null;
     await _localPayloadsSub?.cancel();
     _localPayloadsSub = null;
     await _signalingSub?.cancel();

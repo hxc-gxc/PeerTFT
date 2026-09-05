@@ -25,7 +25,7 @@ class _FakeChannel extends RTCDataChannel {
 
   // Unused by FileSender / FileReceiver (they use the injected _messages stream):
   @override
-  RTCDataChannelState? get state => null;
+  RTCDataChannelState? get state => RTCDataChannelState.RTCDataChannelOpen;
   @override
   int? get id => null;
   @override
