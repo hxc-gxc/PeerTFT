@@ -1,0 +1,5 @@
+# Replace with the real domain before deploying; Caddy provisions the
+# Let's Encrypt certificate for it automatically on first start.
+signaling.example.com {
+	reverse_proxy signaling:8080
+}

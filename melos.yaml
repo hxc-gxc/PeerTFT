@@ -1,0 +1,29 @@
+name: peertft
+
+packages:
+  - packages/*
+
+command:
+  bootstrap:
+    runPubGetInParallel: true
+
+scripts:
+  analyze:
+    run: dart analyze .
+    exec:
+      concurrency: 1
+    packageFilters:
+      dirExists: lib
+    description: Run static analysis on every package.
+
+  test:
+    run: dart test
+    exec:
+      concurrency: 1
+    packageFilters:
+      dirExists: test
+    description: Run tests on every package that has one.
+
+  format:
+    run: dart format --set-exit-if-changed .
+    description: Check formatting across the whole workspace.
