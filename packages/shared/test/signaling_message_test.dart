@@ -15,7 +15,10 @@ void main() {
     });
 
     test('JoinRoom with a reconnectToken round-trips it', () {
-      const message = JoinRoom('renard-bureau-lampe-zenith', reconnectToken: 'peer-old-1');
+      const message = JoinRoom(
+        'renard-bureau-lampe-zenith',
+        reconnectToken: 'peer-old-1',
+      );
       final decoded = SignalingMessage.fromJson(
         jsonDecode(jsonEncode(message.toJson())) as Map<String, dynamic>,
       );

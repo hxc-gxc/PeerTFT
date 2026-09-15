@@ -4,9 +4,9 @@ import 'room_error_reason.dart';
 /// server over the WebSocket connection.
 ///
 /// The server only ever needs to understand [JoinRoom], [RoomJoined],
-/// [PeerConnected], [PeerDisconnected], [RoomError] and the outer shape of
-/// [RelayMessage]. It never parses [RelayMessage.payload]: that string is an
-/// opaque, client-encoded [Offer]/[Answer]/[IceCandidate].
+/// [PeerConnected], [PeerDisconnected], [PeerReconnecting], [RoomError] and
+/// the outer shape of [RelayMessage]. It never parses [RelayMessage.payload]:
+/// that string is an opaque, client-encoded [Offer]/[Answer]/[IceCandidate].
 sealed class SignalingMessage {
   const SignalingMessage();
 
@@ -36,6 +36,7 @@ final class JoinRoom extends SignalingMessage {
   const JoinRoom(this.code, {this.reconnectToken});
 
   final String code;
+
   /// The peerId this client was issued on a previous join to this same room,
   /// presented so the server can restore a `_Pending` slot instead of
   /// treating this as a brand-new stranger. `null` on a first-ever join.
