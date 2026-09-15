@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:app/src/state/transfer_session.dart';
 import 'package:app/src/ui/receive_page.dart';
 import 'package:app/src/ui/send_page.dart';
+import 'package:app/src/ui/transfer_page.dart';
 
 /// Minimal stub so widget tests can set any [TransferState] without touching
 /// platform channels (WebRTC, file picker, WebSocket).
@@ -110,5 +111,31 @@ void main() {
 
       expect(find.text('Code de transfert'), findsOneWidget);
     });
+  });
+
+  group('TransferPage', () {
+    testWidgets(
+      'Reconnecting state: shows countdown and keeps cancel working',
+      (tester) async {
+        final deadline = DateTime.now().add(const Duration(seconds: 12));
+        await tester.pumpWidget(
+          _app(const TransferPage(), Reconnecting(deadline: deadline)),
+        );
+        await tester.pump();
+
+        expect(find.text('Reconnexion en cours…'), findsOneWidget);
+        expect(find.text('Annuler'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+        await tester.tap(find.text('Annuler'));
+        await tester.pump();
+        // _StubSession.cancel() sets state back to Idle -- TransferPage's
+        // switch falls through to the generic catch-all spinner for any
+        // state it doesn't name explicitly (Idle included), so the
+        // Reconnecting-specific text/countdown must be gone even though a
+        // (different) CircularProgressIndicator is still shown.
+        expect(find.text('Reconnexion en cours…'), findsNothing);
+      },
+    );
   });
 }
