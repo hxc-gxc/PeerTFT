@@ -10,6 +10,7 @@ import 'package:shared/shared.dart';
 import '../metrics/connection_metrics.dart';
 import '../platform/web_download_stub.dart'
     if (dart.library.html) '../platform/web_download_web.dart';
+import '../platform/web_save.dart';
 import '../signaling/signaling_client.dart';
 import '../transfer/transfer.dart';
 import '../webrtc/webrtc_connection.dart';
@@ -114,6 +115,7 @@ class TransferSession extends Notifier<TransferState> {
   // ignore: unused_field // live reference held for a later chunk (e.g. cancel-during-resume)
   FileSender? _currentSender;
   _PendingResume? _pendingResume;
+  WebWritableSink? _webSink;
 
   static final _signalingWsUri = Uri.parse(
     const String.fromEnvironment(
@@ -146,8 +148,16 @@ class TransferSession extends Notifier<TransferState> {
     }
   }
 
-  Future<void> startReceive(String code) async {
-    await _beginSession(code: code, isInitiator: false);
+  Future<void> startReceive(String code, {WebWritableSink? webSink}) async {
+    await _beginSession(
+      code: code,
+      isInitiator: false,
+    ); // _beginSession itself starts with `await _cancelInternal()`, which
+    // aborts whatever `_webSink` is left over from a PRIOR session
+    _webSink =
+        webSink; // must be assigned AFTER _beginSession returns --
+    // assigning before would have this same call's _cancelInternal() abort
+    // the sink the user just granted, before the session even starts
   }
 
   Future<void> _beginSession({
@@ -170,7 +180,7 @@ class TransferSession extends Notifier<TransferState> {
   }
 
   Future<void> _handleSignalingDrop() async {
-    if (state is Transferring || state is Negotiating) {
+    if ((state is Transferring || state is Negotiating) && _webSink == null) {
       await _captureResumeState();
       // The ICE-drop trigger (_onConnectionLost) runs synchronously and could
       // have already claimed Reconnecting while the await above was in
@@ -182,7 +192,16 @@ class TransferSession extends Notifier<TransferState> {
       unawaited(_attemptReconnect(deadline));
       return;
     }
-    if (state is WaitingForPeer || state is Connecting) {
+    if (state is WaitingForPeer ||
+        state is Connecting ||
+        state is Transferring ||
+        state is Negotiating) {
+      // Either not resumable at all (today's pre-existing cases), or
+      // mid-transfer but using a WebWritableSink, which can't resume
+      // (see this task's header comment) -- fail now rather than entering
+      // Reconnecting.
+      unawaited(_webSink?.abort());
+      _webSink = null;
       state = const Failed('Connexion au serveur perdue.');
       unawaited(_cancelInternal());
     }
@@ -249,6 +268,8 @@ class TransferSession extends Notifier<TransferState> {
             success,
           ) {
             if (!success) {
+              unawaited(_webSink?.abort());
+              _webSink = null;
               state = const Failed(
                 'Connexion directe impossible sur ce réseau.',
               );
@@ -256,7 +277,8 @@ class TransferSession extends Notifier<TransferState> {
           }),
         );
       case PeerReconnecting():
-        if (state is Transferring || state is Negotiating) {
+        if ((state is Transferring || state is Negotiating) &&
+            _webSink == null) {
           unawaited(
             _captureResumeState().then((_) {
               // Same race guard as _handleSignalingDrop: the ICE-drop trigger
@@ -270,6 +292,15 @@ class TransferSession extends Notifier<TransferState> {
               // connection is fine. Just wait for PeerConnected/PeerDisconnected.
             }),
           );
+        } else if (state is Transferring || state is Negotiating) {
+          // Using a WebWritableSink for this receive -- resume isn't
+          // supported for it (see _handleSignalingDrop's comment), so don't
+          // wait out the other peer's own grace window; fail now instead of
+          // entering Reconnecting.
+          unawaited(_webSink?.abort());
+          _webSink = null;
+          state = const Failed('Le pair s\'est déconnecté.');
+          unawaited(_cancelInternal());
         }
       case RelayMessage():
         final payload = WebRtcPayload.decode(message.payload);
@@ -278,6 +309,8 @@ class TransferSession extends Notifier<TransferState> {
         state = const Failed('Le pair s\'est déconnecté.');
         unawaited(_cancelInternal());
       case RoomError():
+        unawaited(_webSink?.abort());
+        _webSink = null;
         state = Failed('Erreur de salle: ${message.reason.name}');
       case JoinRoom():
         break;
@@ -285,7 +318,7 @@ class TransferSession extends Notifier<TransferState> {
   }
 
   Future<void> _captureResumeState() async {
-    if (_isInitiator) {
+    if (_isInitiator || _webSink != null) {
       _pendingResume = null;
       return;
     }
@@ -387,6 +420,15 @@ class TransferSession extends Notifier<TransferState> {
     // Reconnecting", since Reconnecting is neither Transferring nor
     // Negotiating.
     if (state is! Transferring && state is! Negotiating) return;
+    if (_webSink != null) {
+      // Using a WebWritableSink -- resume isn't supported for it (see
+      // _handleSignalingDrop's comment).
+      unawaited(_webSink?.abort());
+      _webSink = null;
+      state = const Failed('Connexion perdue.');
+      unawaited(_cancelInternal());
+      return;
+    }
     _stallTimer?.cancel();
     final deadline = DateTime.now().add(const Duration(seconds: 30));
     state = Reconnecting(deadline: deadline);
@@ -570,6 +612,7 @@ class TransferSession extends Notifier<TransferState> {
       resumeFileName: resume != null ? _fileName : null,
       resumeSavePath: resume != null ? _savePath : null,
       initialBytes: resume?.initialBytes,
+      webSink: _webSink,
     );
     _currentReceiver = receiver;
 
@@ -577,12 +620,14 @@ class TransferSession extends Notifier<TransferState> {
       final result = await receiver.receive();
       if (myGeneration != _generation) return;
       if (result == null) {
+        _webSink = null;
         state = const Idle();
         return;
       }
       if (kIsWeb && result.bytes != null) {
         await webDownload(result.fileName ?? 'fichier', result.bytes!);
       }
+      _webSink = null;
       state = Complete(
         savedPath: result.savedPath,
         sha256Sent: result.sha256Sent,
@@ -591,6 +636,8 @@ class TransferSession extends Notifier<TransferState> {
       );
     } catch (e) {
       if (myGeneration == _generation) {
+        unawaited(_webSink?.abort());
+        _webSink = null;
         state = Failed('Erreur de réception: $e');
       }
     }
@@ -638,6 +685,8 @@ class TransferSession extends Notifier<TransferState> {
     _remotePeerId = null;
     _pendingResume = null;
     _currentReceiver = null;
+    unawaited(_webSink?.abort());
+    _webSink = null;
     _currentSender = null;
     _throughputWindow.clear();
   }

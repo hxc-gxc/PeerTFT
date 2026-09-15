@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:app/src/platform/web_save.dart';
 import 'package:app/src/state/transfer_session.dart';
 import 'package:app/src/ui/receive_page.dart';
 import 'package:app/src/ui/send_page.dart';
@@ -21,7 +22,7 @@ class _StubSession extends TransferSession {
   Future<void> startSend(PlatformFile platformFile) async {}
 
   @override
-  Future<void> startReceive(String code) async {}
+  Future<void> startReceive(String code, {WebWritableSink? webSink}) async {}
 
   @override
   Future<void> cancel() async {
