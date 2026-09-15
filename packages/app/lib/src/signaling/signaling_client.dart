@@ -24,7 +24,8 @@ class SignalingClient {
       )
       .asBroadcastStream();
 
-  void joinRoom(String code) => _send(JoinRoom(code));
+  void joinRoom(String code, {String? reconnectToken}) =>
+      _send(JoinRoom(code, reconnectToken: reconnectToken));
 
   void sendRelay({
     required String targetPeerId,
