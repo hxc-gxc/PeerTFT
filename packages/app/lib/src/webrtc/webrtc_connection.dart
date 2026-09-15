@@ -54,6 +54,13 @@ class WebRtcConnection {
   Stream<RTCDataChannelMessage> get dataChannelMessages =>
       _dataChannelMessages.stream;
 
+  /// Emits once per ICE drop that happens *after* the initial handshake
+  /// already succeeded (i.e. after [outcome] has already completed). The
+  /// one-shot [outcome] future still owns the initial-handshake-failed
+  /// cases, unchanged.
+  final _connectionLost = StreamController<void>.broadcast();
+  Stream<void> get connectionLost => _connectionLost.stream;
+
   /// The negotiated DataChannel, available after ICE success.
   RTCDataChannel? get dataChannel => _dataChannel;
 
@@ -170,9 +177,14 @@ class WebRtcConnection {
       case RTCIceConnectionState.RTCIceConnectionStateCompleted:
         _complete(ConnectionOutcome.directSuccess);
       case RTCIceConnectionState.RTCIceConnectionStateFailed:
-        _complete(ConnectionOutcome.iceFailed);
+        if (_outcomeCompleter.isCompleted) {
+          _connectionLost.add(null);
+        } else {
+          _complete(ConnectionOutcome.iceFailed);
+        }
       case RTCIceConnectionState.RTCIceConnectionStateDisconnected:
       case RTCIceConnectionState.RTCIceConnectionStateClosed:
+        if (_outcomeCompleter.isCompleted) _connectionLost.add(null);
       case RTCIceConnectionState.RTCIceConnectionStateNew:
       case RTCIceConnectionState.RTCIceConnectionStateChecking:
       case RTCIceConnectionState.RTCIceConnectionStateCount:
@@ -223,5 +235,6 @@ class WebRtcConnection {
     await _pc?.close();
     await _localPayloads.close();
     await _dataChannelMessages.close();
+    await _connectionLost.close();
   }
 }
