@@ -217,8 +217,9 @@ class FileReceiver {
        ),
        assert(
          webSink == null || resumeFromByte == 0,
-         'webSink-based receives do not support resume -- TransferSession '
-         'must never construct one this way (see its _webSink-aware guards)',
+         'webSink-based receives do not support resume -- callers must '
+         'never construct one this way. (Note: this assert is stripped in '
+         'release/profile builds; it is not a runtime-enforced guarantee.)',
        );
 
   final RTCDataChannel _channel;
@@ -315,6 +316,10 @@ class FileReceiver {
       if (msg.isBinary) {
         final data = msg.binary;
         if (webSink != null) {
+          // Awaited deliberately, unlike _sink?.add (which buffers
+          // internally): this is what gives the File System Access path
+          // its backpressure, the whole reason to stream instead of
+          // buffering the file in memory.
           await webSink!.write(data);
         } else {
           _sink?.add(data);
@@ -335,35 +340,34 @@ class FileReceiver {
     await _sink?.flush();
     await _sink?.close();
 
+    if (webSink != null && receivedHash == null) {
+      // Stream ended without ever seeing file-end (peer dropped
+      // mid-transfer). Unlike the native/BytesBuilder branches below, which
+      // unconditionally flush/close regardless of how the loop ended, an
+      // open FileSystemWritableFileStream left un-closed holds an OS-level
+      // lock on the destination file -- abort discards the partial write.
+      // A future caller reading `receive()`'s null return should treat
+      // this sink as already cleaned up -- do not call abort() again on it.
+      await webSink!.abort();
+      return null;
+    }
+
+    final computed = sha256.hexDigest();
+    final hashMatch = receivedHash == computed;
+
     if (webSink != null) {
-      if (receivedHash == null) {
-        // Stream ended without ever seeing file-end (peer dropped
-        // mid-transfer). Unlike the native/BytesBuilder branches above,
-        // which unconditionally flush/close regardless of how the loop
-        // ended, an open FileSystemWritableFileStream left un-closed holds
-        // an OS-level lock on the destination file -- abort discards the
-        // partial write. TransferSession's result==null handler must NOT
-        // call abort() again on this same sink; it only nulls out its own
-        // reference.
-        await webSink!.abort();
-        return null;
-      }
       await webSink!.close();
-      final computed = sha256.hexDigest();
       return ReceiveResult(
         null,
-        receivedHash,
+        receivedHash!,
         computed,
-        receivedHash == computed,
+        hashMatch,
         fileName: fileName,
         // no `bytes:` populated -- nothing to hand to webDownload(), the
         // browser already has the file on disk via the FileSystemFileHandle
         // the user picked before the transfer started.
       );
     }
-
-    final computed = sha256.hexDigest();
-    final hashMatch = receivedHash == computed;
 
     if (webMode) {
       return ReceiveResult(
