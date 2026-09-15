@@ -154,8 +154,7 @@ class TransferSession extends Notifier<TransferState> {
       isInitiator: false,
     ); // _beginSession itself starts with `await _cancelInternal()`, which
     // aborts whatever `_webSink` is left over from a PRIOR session
-    _webSink =
-        webSink; // must be assigned AFTER _beginSession returns --
+    _webSink = webSink; // must be assigned AFTER _beginSession returns --
     // assigning before would have this same call's _cancelInternal() abort
     // the sink the user just granted, before the session even starts
   }
@@ -200,8 +199,7 @@ class TransferSession extends Notifier<TransferState> {
       // mid-transfer but using a WebWritableSink, which can't resume
       // (see this task's header comment) -- fail now rather than entering
       // Reconnecting.
-      unawaited(_webSink?.abort());
-      _webSink = null;
+      _releaseWebSink();
       state = const Failed('Connexion au serveur perdue.');
       unawaited(_cancelInternal());
     }
@@ -268,8 +266,7 @@ class TransferSession extends Notifier<TransferState> {
             success,
           ) {
             if (!success) {
-              unawaited(_webSink?.abort());
-              _webSink = null;
+              _releaseWebSink();
               state = const Failed(
                 'Connexion directe impossible sur ce réseau.',
               );
@@ -297,8 +294,7 @@ class TransferSession extends Notifier<TransferState> {
           // supported for it (see _handleSignalingDrop's comment), so don't
           // wait out the other peer's own grace window; fail now instead of
           // entering Reconnecting.
-          unawaited(_webSink?.abort());
-          _webSink = null;
+          _releaseWebSink();
           state = const Failed('Le pair s\'est déconnecté.');
           unawaited(_cancelInternal());
         }
@@ -309,12 +305,23 @@ class TransferSession extends Notifier<TransferState> {
         state = const Failed('Le pair s\'est déconnecté.');
         unawaited(_cancelInternal());
       case RoomError():
-        unawaited(_webSink?.abort());
-        _webSink = null;
+        _releaseWebSink();
         state = Failed('Erreur de salle: ${message.reason.name}');
       case JoinRoom():
         break;
     }
+  }
+
+  /// Aborts `_webSink` and clears it -- unless a `FileReceiver.receive()`
+  /// call is already in flight (`_currentReceiver != null`), in which case
+  /// that call already owns aborting the sink itself once its stream ends
+  /// (see `transfer.dart`'s `receivedHash == null` branch); calling
+  /// `abort()` here too would double-abort the same underlying stream.
+  void _releaseWebSink() {
+    if (_currentReceiver == null) {
+      unawaited(_webSink?.abort());
+    }
+    _webSink = null;
   }
 
   Future<void> _captureResumeState() async {
@@ -423,8 +430,7 @@ class TransferSession extends Notifier<TransferState> {
     if (_webSink != null) {
       // Using a WebWritableSink -- resume isn't supported for it (see
       // _handleSignalingDrop's comment).
-      unawaited(_webSink?.abort());
-      _webSink = null;
+      _releaseWebSink();
       state = const Failed('Connexion perdue.');
       unawaited(_cancelInternal());
       return;
@@ -684,9 +690,8 @@ class TransferSession extends Notifier<TransferState> {
     _myPeerId = null;
     _remotePeerId = null;
     _pendingResume = null;
+    _releaseWebSink(); // must run before nulling _currentReceiver below
     _currentReceiver = null;
-    unawaited(_webSink?.abort());
-    _webSink = null;
     _currentSender = null;
     _throughputWindow.clear();
   }

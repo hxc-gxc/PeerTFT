@@ -15,8 +15,7 @@ extension type _FileSystemFileHandle._(JSObject _) implements JSObject {
   external JSPromise<JSObject> createWritable();
 }
 
-extension type _FileSystemWritableFileStream._(JSObject _)
-    implements JSObject {
+extension type _FileSystemWritableFileStream._(JSObject _) implements JSObject {
   external JSPromise<JSAny?> write(JSAny data);
   external JSPromise<JSAny?> close();
   external JSPromise<JSAny?> abort();
