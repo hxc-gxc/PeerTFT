@@ -199,9 +199,7 @@ class TransferSession extends Notifier<TransferState> {
       // mid-transfer but using a WebWritableSink, which can't resume
       // (see this task's header comment) -- fail now rather than entering
       // Reconnecting.
-      _releaseWebSink();
-      state = const Failed('Connexion au serveur perdue.');
-      unawaited(_cancelInternal());
+      _failMidTransfer('Connexion au serveur perdue.');
     }
   }
 
@@ -294,9 +292,7 @@ class TransferSession extends Notifier<TransferState> {
           // supported for it (see _handleSignalingDrop's comment), so don't
           // wait out the other peer's own grace window; fail now instead of
           // entering Reconnecting.
-          _releaseWebSink();
-          state = const Failed('Le pair s\'est déconnecté.');
-          unawaited(_cancelInternal());
+          _failMidTransfer('Le pair s\'est déconnecté.');
         }
       case RelayMessage():
         final payload = WebRtcPayload.decode(message.payload);
@@ -317,11 +313,25 @@ class TransferSession extends Notifier<TransferState> {
   /// that call already owns aborting the sink itself once its stream ends
   /// (see `transfer.dart`'s `receivedHash == null` branch); calling
   /// `abort()` here too would double-abort the same underlying stream.
+  ///
+  /// Call this -- never abort `_webSink` directly -- from any site outside
+  /// `_runReceiver`'s own `catch` handler (which is the one place a
+  /// genuine exception means `receive()` never reached its own cleanup, so
+  /// there's nothing already in flight to defer to).
   void _releaseWebSink() {
     if (_currentReceiver == null) {
       unawaited(_webSink?.abort());
     }
     _webSink = null;
+  }
+
+  /// Shared tail for the two reconnect-trigger sites that fail a
+  /// webSink-based receive immediately instead of entering `Reconnecting`
+  /// (see `_handleSignalingDrop`'s comment for why webSink can't resume).
+  void _failMidTransfer(String message) {
+    _releaseWebSink();
+    state = Failed(message);
+    unawaited(_cancelInternal());
   }
 
   Future<void> _captureResumeState() async {
@@ -430,9 +440,7 @@ class TransferSession extends Notifier<TransferState> {
     if (_webSink != null) {
       // Using a WebWritableSink -- resume isn't supported for it (see
       // _handleSignalingDrop's comment).
-      _releaseWebSink();
-      state = const Failed('Connexion perdue.');
-      unawaited(_cancelInternal());
+      _failMidTransfer('Connexion perdue.');
       return;
     }
     _stallTimer?.cancel();
