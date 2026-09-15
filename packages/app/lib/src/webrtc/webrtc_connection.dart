@@ -4,6 +4,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:shared/shared.dart';
 
 import '../metrics/connection_metrics.dart';
+import 'buffered_broadcast.dart';
 
 /// WebRTC handshake wrapper: Offer/Answer/ICE exchange over the signaling
 /// server, then a DataChannel ready for chunked file transfer.
@@ -41,8 +42,15 @@ class WebRtcConnection {
   Stream<WebRtcPayload> get localPayloads => _localPayloads.stream;
 
   /// Emits every message received on the DataChannel (text and binary).
-  final _dataChannelMessages =
-      StreamController<RTCDataChannelMessage>.broadcast();
+  //
+  // Buffered, not a raw broadcast StreamController: the DataChannel can
+  // start delivering messages (e.g. file-meta) before FileSender/FileReceiver
+  // subscribes -- ICE outcome + getStats() + network-type detection all run
+  // first, and their timing differs across web/mac/android. A plain
+  // broadcast stream silently drops events with no listener, which was
+  // deadlocking transfers with no error and no timeout (nothing ever called
+  // onProgress, so the stall timer never even started).
+  final _dataChannelMessages = BufferedBroadcast<RTCDataChannelMessage>();
   Stream<RTCDataChannelMessage> get dataChannelMessages =>
       _dataChannelMessages.stream;
 

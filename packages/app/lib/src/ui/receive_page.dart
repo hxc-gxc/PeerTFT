@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../state/transfer_session.dart';
+import '../theme/app_theme.dart';
+import 'send_page.dart';
 import 'transfer_page.dart';
+import 'widgets/app_scaffold.dart';
+import 'widgets/bottom_nav_bar.dart';
+import 'widgets/decorations.dart';
+import 'widgets/gradient_button.dart';
 
 class ReceivePage extends ConsumerStatefulWidget {
   const ReceivePage({super.key});
@@ -33,16 +41,94 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Recevoir')),
+    final isWaiting = state is WaitingForPeer;
+
+    return AppScaffold(
+      backdrop: const Stack(
+        children: [
+          // Mint and Pink blobs at the top matching Mockup 4
+          Positioned(
+            top: -50,
+            left: -30,
+            child: Opacity(
+              opacity: 0.55,
+              child: BackgroundBlob(color: AppTheme.mint, size: 210),
+            ),
+          ),
+          Positioned(
+            top: -70,
+            right: -50,
+            child: Opacity(
+              opacity: 0.5,
+              child: BackgroundBlob(color: AppTheme.pink, size: 190),
+            ),
+          ),
+          Positioned(
+            bottom: -60,
+            left: -40,
+            child: Opacity(
+              opacity: 0.2,
+              child: BackgroundBlob(color: AppTheme.indigo, size: 160),
+            ),
+          ),
+          Positioned(
+            bottom: 60,
+            right: -20,
+            child: Opacity(
+              opacity: 0.25,
+              child: BackgroundBlob(color: AppTheme.mint, size: 100),
+            ),
+          ),
+          Positioned(
+            bottom: 220,
+            right: 36,
+            child: Dot(color: AppTheme.indigo, opacity: 0.25),
+          ),
+        ],
+      ),
+      appBar: AppBar(
+        titleSpacing: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.ink),
+        ),
+        title: Text(
+          'Recevoir',
+          style: GoogleFonts.baloo2(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.ink,
+          ),
+        ),
+      ),
+      bottomNavigationBar: state is Idle
+          ? PeerBottomNavBar(
+              currentTab: NavTab.recevoir,
+              onTabSelected: (tab) {
+                if (tab == NavTab.envoyer) {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const SendPage()),
+                  );
+                } else if (tab == NavTab.historique || tab == NavTab.parametres) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${tab.name} sera disponible bientôt')),
+                  );
+                }
+              },
+            )
+          : null,
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         child: switch (state) {
           Idle() => _enterCodeView(context),
-          Connecting() => const Center(child: CircularProgressIndicator()),
+          Connecting() => const Center(
+              child: CircularProgressIndicator(color: AppTheme.indigo),
+            ),
           WaitingForPeer(:final code) => _waitingView(code),
           Failed(:final message) => _failedView(context, message),
-          _ => const Center(child: CircularProgressIndicator()),
+          _ => const Center(
+              child: CircularProgressIndicator(color: AppTheme.indigo),
+            ),
         },
       ),
     );
@@ -50,51 +136,183 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
 
   Widget _enterCodeView(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          TextField(
-            controller: _codeController,
-            decoration: const InputDecoration(
-              labelText: 'Code de transfert',
-              hintText: 'renard-bureau-lampe-zenith',
-              border: OutlineInputBorder(),
-            ),
+      child: SingleChildScrollView(
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 26),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.ink.withValues(alpha: 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: _join,
-            icon: const Icon(Icons.link),
-            label: const Text('Rejoindre'),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Liquid organic blob illustration with specular gloss
+              const ReceivingBlobIllustration(width: 130, height: 90),
+              const SizedBox(height: 18),
+              Text(
+                'On récupère ton fichier',
+                style: GoogleFonts.baloo2(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.ink,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Entre le code reçu ou scanne le QR',
+                style: GoogleFonts.nunito(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.ink.withValues(alpha: 0.6),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 22),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Code de transfert',
+                  style: GoogleFonts.nunito(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: AppTheme.ink,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _codeController,
+                textAlign: TextAlign.left,
+                style: GoogleFonts.baloo2(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.ink,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'ex. mangue-plafond-camion-aurore',
+                  hintStyle: GoogleFonts.nunito(
+                    color: AppTheme.ink.withValues(alpha: 0.4),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(
+                      Icons.qr_code_scanner_rounded,
+                      color: Color(0xFFFF6B8B),
+                      size: 24,
+                    ),
+                    onPressed: _openQrScanner,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              GradientButton(
+                label: 'Rejoindre le transfert',
+                colors: const [Color(0xFF582BE8), Color(0xFF7C3AED)],
+                onPressed: _join,
+              ),
+              const SizedBox(height: 12),
+              GradientButton(
+                label: 'Scanner un QR code',
+                isOutlined: true,
+                outlineColor: const Color(0xFF4EEDB2),
+                textColor: const Color(0xFF059669),
+                onPressed: _openQrScanner,
+              ),
+              const SizedBox(height: 22),
+              // Carousel / Indicator dots matching Mockup 4
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _indicatorDot(const Color(0xFF4EEDB2)),
+                  const SizedBox(width: 8),
+                  _indicatorDot(const Color(0xFFFF6B8B)),
+                  const SizedBox(width: 8),
+                  _indicatorDot(const Color(0xFF582BE8)),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
+  Widget _indicatorDot(Color color) {
+    return Container(
+      width: 7,
+      height: 7,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+      ),
+    );
+  }
+
+  void _openQrScanner() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Scanner QR à venir')),
+    );
+  }
+
   Widget _waitingView(String code) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        SelectableText(
-          code,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
+    return Center(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.ink.withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-        const SizedBox(height: 24),
-        const Text(
-          'En attente de l\'émetteur…',
-          style: TextStyle(fontSize: 14, color: Colors.grey),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SelectableText(
+              code,
+              style: GoogleFonts.baloo2(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.ink,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'En attente de l’émetteur…',
+              style: GoogleFonts.nunito(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.ink.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 24),
+            GradientButton(
+              label: 'Annuler',
+              colors: const [Color(0xFF582BE8), Color(0xFF7C3AED)],
+              onPressed: () {
+                ref.read(transferSessionProvider.notifier).cancel();
+                setState(() => _started = false);
+              },
+            ),
+          ],
         ),
-        const SizedBox(height: 24),
-        TextButton(
-          onPressed: () {
-            ref.read(transferSessionProvider.notifier).cancel();
-            setState(() => _started = false);
-          },
-          child: const Text('Annuler'),
-        ),
-      ],
+      ),
     );
   }
 
@@ -103,7 +321,7 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+          SvgPicture.asset('assets/illustrations/no_connection.svg', height: 140),
           const SizedBox(height: 16),
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: 24),

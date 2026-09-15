@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'src/theme/app_theme.dart';
 import 'src/ui/home_page.dart';
 
 void main() {
@@ -14,7 +15,7 @@ class PeerTftApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PeerTFT',
-      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
+      theme: AppTheme.theme,
       home: const HomePage(),
     );
   }
