@@ -44,15 +44,26 @@ class _FakeChannel extends RTCDataChannel {
 /// and both sides deadlock.
 ({FileSender sender, FileReceiver receiver}) _makePipe({
   Future<String?> Function(String)? savePathProvider,
+  bool isResume = false,
+  int resumeFromByte = 0,
+  String? resumeFileName,
+  String? resumeSavePath,
+  Uint8List? initialBytes,
+  void Function(String, int, String?)? onMeta,
 }) {
   final s2r = StreamController<RTCDataChannelMessage>.broadcast();
   final r2s = StreamController<RTCDataChannelMessage>.broadcast();
 
-  final sender = FileSender(_FakeChannel(s2r), r2s.stream);
+  final sender = FileSender(_FakeChannel(s2r), r2s.stream, isResume: isResume);
   final receiver = FileReceiver(
     _FakeChannel(r2s),
     s2r.stream,
     savePathProvider, // null = web mode (buffer in memory)
+    onMeta: onMeta,
+    resumeFromByte: resumeFromByte,
+    resumeFileName: resumeFileName,
+    resumeSavePath: resumeSavePath,
+    initialBytes: initialBytes,
   );
 
   return (sender: sender, receiver: receiver);
@@ -130,6 +141,67 @@ void main() {
 
       expect(receiveResult!.hashMatch, isTrue);
       expect(receiveResult.bytes, isEmpty);
+    });
+
+    test('resume: receiver seeded with initialBytes gets full file back', () async {
+      final full = Uint8List.fromList(List.generate(40 * 1024, (i) => i % 256));
+      const splitAt = 20 * 1024;
+      final already = Uint8List.sublistView(full, 0, splitAt);
+
+      final (:sender, :receiver) = _makePipe(
+        isResume: true,
+        resumeFromByte: splitAt,
+        resumeFileName: 'resumed.bin',
+        initialBytes: Uint8List.fromList(already),
+      );
+
+      final receiverFuture = receiver.receive();
+      // `sender` was built with isResume: true (via _makePipe), so
+      // sendBytes waits for the receiver's `resume` message and seeks to
+      // that offset internally instead of sending file-meta.
+      // It must be given the *whole* file's bytes (`full`, not a slice):
+      // the offset to start actually sending from comes from the wire, not
+      // from the caller slicing the array beforehand.
+      final (_, receiveResult) = await (
+        sender.sendBytes('resumed.bin', full),
+        receiverFuture,
+      ).wait;
+
+      expect(receiveResult!.hashMatch, isTrue);
+      expect(receiveResult.bytes, full);
+    });
+
+    test('receiver.onMeta fires once on a fresh receive with name and size', () async {
+      String? gotName;
+      int? gotSize;
+      final (:sender, :receiver) = _makePipe(
+        onMeta: (name, size, savePath) {
+          gotName = name;
+          gotSize = size;
+        },
+      );
+      final bytes = Uint8List.fromList([1, 2, 3, 4]);
+      final receiverFuture = receiver.receive();
+      await (sender.sendBytes('meta.bin', bytes), receiverFuture).wait;
+
+      expect(gotName, 'meta.bin');
+      expect(gotSize, 4);
+    });
+
+    test('receiver.onMeta does not fire on a resumed receive', () async {
+      var metaCalls = 0;
+      final full = Uint8List.fromList(List.generate(10, (i) => i));
+      final (:sender, :receiver) = _makePipe(
+        isResume: true,
+        resumeFromByte: 5,
+        resumeFileName: 'r.bin',
+        initialBytes: Uint8List.sublistView(full, 0, 5),
+        onMeta: (_, _, _) => metaCalls++,
+      );
+      final receiverFuture = receiver.receive();
+      await (sender.sendBytes('r.bin', full), receiverFuture).wait;
+
+      expect(metaCalls, 0);
     });
   });
 }

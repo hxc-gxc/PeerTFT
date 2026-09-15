@@ -40,20 +40,25 @@ const _bufferHighWatermark = 1024 * 1024; // 1 MB — backpressure threshold
 /// `file-end` with SHA-256. The file is streamed from disk and hashed
 /// chunk-by-chunk, so it is never fully held in memory.
 class FileSender {
-  FileSender(this._channel, this._messages, {this.onProgress});
+  FileSender(this._channel, this._messages, {this.onProgress, this.isResume = false});
 
   final RTCDataChannel _channel;
   final Stream<RTCDataChannelMessage> _messages;
   final void Function(int bytesSent)? onProgress;
+  final bool isResume;
 
   Future<SendResult> send(File file) async {
-    final name = file.uri.pathSegments.last;
     final size = await file.length();
+    var resumeFrom = 0;
 
-    _sendJson({'type': 'file-meta', 'name': name, 'size': size});
-
-    final ack = await _waitForAck();
-    if (!ack) throw Exception('Transfer rejected by receiver');
+    if (isResume) {
+      resumeFrom = await _waitForResume();
+    } else {
+      final name = file.uri.pathSegments.last;
+      _sendJson({'type': 'file-meta', 'name': name, 'size': size});
+      final ack = await _waitForAck();
+      if (!ack) throw Exception('Transfer rejected by receiver');
+    }
 
     final raf = await file.open();
     final sha256 = _Sha256Sink();
@@ -61,6 +66,22 @@ class FileSender {
     final buffer = Uint8List(_chunkSize);
 
     try {
+      if (resumeFrom > 0) {
+        // Replay [0, resumeFrom) through the hash (local disk read, not a
+        // network send) to reconstruct a correct running hash before
+        // continuing the chunked send loop from the same offset.
+        final replay = Uint8List(_chunkSize);
+        var replayed = 0;
+        while (replayed < resumeFrom) {
+          final toRead = (resumeFrom - replayed).clamp(0, _chunkSize);
+          final read = await raf.readInto(replay, 0, toRead);
+          if (read <= 0) break;
+          sha256.add(read == replay.length ? replay : Uint8List.view(replay.buffer, 0, read));
+          replayed += read;
+        }
+        bytesSent = replayed;
+      }
+
       while (bytesSent < size) {
         final read = await raf.readInto(buffer);
         if (read <= 0) break;
@@ -84,13 +105,19 @@ class FileSender {
 
   /// Web path: send from in-memory bytes (no filesystem access).
   Future<SendResult> sendBytes(String name, Uint8List bytes) async {
-    _sendJson({'type': 'file-meta', 'name': name, 'size': bytes.length});
+    var resumeFrom = 0;
 
-    final ack = await _waitForAck();
-    if (!ack) throw Exception('Transfer rejected by receiver');
+    if (isResume) {
+      resumeFrom = await _waitForResume();
+    } else {
+      _sendJson({'type': 'file-meta', 'name': name, 'size': bytes.length});
+      final ack = await _waitForAck();
+      if (!ack) throw Exception('Transfer rejected by receiver');
+    }
 
     final sha256 = _Sha256Sink();
-    var bytesSent = 0;
+    if (resumeFrom > 0) sha256.add(bytes.sublist(0, resumeFrom));
+    var bytesSent = resumeFrom;
 
     while (bytesSent < bytes.length) {
       final end = (bytesSent + _chunkSize).clamp(0, bytes.length);
@@ -104,6 +131,15 @@ class FileSender {
     final hashHex = sha256.hexDigest();
     _sendJson({'type': 'file-end', 'sha256': hashHex});
     return SendResult(hashHex, bytesSent);
+  }
+
+  Future<int> _waitForResume() async {
+    return _messages
+        .where((m) => !m.isBinary)
+        .map((m) => jsonDecode(m.text) as Map<String, dynamic>)
+        .where((m) => m['type'] == 'resume')
+        .first
+        .then((m) => m['bytesReceived'] as int);
   }
 
   Future<bool> _waitForAck() async {
@@ -151,50 +187,104 @@ class FileReceiver {
     // null = web mode: buffer bytes in memory instead of writing to disk.
     this.savePathProvider, {
     this.onProgress,
-  });
+    this.onMeta,
+    this.resumeFromByte = 0,
+    this.resumeFileName,
+    this.resumeSavePath,
+    this.initialBytes,
+  }) : assert(
+         resumeFromByte == 0 || (resumeFileName != null),
+         'resumeFileName is required whenever resumeFromByte > 0',
+       );
 
   final RTCDataChannel _channel;
   final Stream<RTCDataChannelMessage> _messages;
   final Future<String?> Function(String fileName)? savePathProvider;
   final void Function(int bytesReceived)? onProgress;
+  /// Fires once, on a *fresh* receive only, right after the save path (or
+  /// web save-dialog-equivalent) is resolved.
+  final void Function(String fileName, int totalBytes, String? savePath)? onMeta;
+  final int resumeFromByte;
+  final String? resumeFileName;
+  final String? resumeSavePath;
+  final Uint8List? initialBytes; // web only; seeds the BytesBuilder
+
+  int _bytesReceived = 0;
+  IOSink? _sink;
+  BytesBuilder? _bytesBuilder;
+
+  int get bytesReceivedSoFar => _bytesReceived;
+  Future<void> flushProgress() => _sink?.flush() ?? Future.value();
+  Uint8List? snapshotBytes() => _bytesBuilder?.toBytes(); // does NOT clear the builder
 
   Future<ReceiveResult?> receive() async {
-    final meta = await _waitForMeta();
-    if (meta == null) return null;
-    final fileName = meta['name'] as String;
-
-    final webMode = savePathProvider == null;
+    final isResume = resumeFromByte > 0;
+    final String fileName;
     String? savePath;
+    final webMode = savePathProvider == null;
 
-    if (!webMode) {
-      savePath = await savePathProvider!(fileName);
-      if (savePath == null) {
-        _sendJson({'type': 'file-reject'});
-        return null;
-      }
-    }
-
-    _sendJson({'type': 'file-ack'});
-
-    IOSink? sink;
-    BytesBuilder? bytesBuilder;
-    if (webMode) {
-      bytesBuilder = BytesBuilder(copy: false);
+    if (isResume) {
+      fileName = resumeFileName!;
+      savePath = resumeSavePath;
     } else {
-      sink = File(savePath!).openWrite();
+      final meta = await _waitForMeta();
+      if (meta == null) return null;
+      fileName = meta['name'] as String;
+      final totalBytes = meta['size'] as int;
+
+      if (!webMode) {
+        savePath = await savePathProvider!(fileName);
+        if (savePath == null) {
+          _sendJson({'type': 'file-reject'});
+          return null;
+        }
+      }
+      onMeta?.call(fileName, totalBytes, savePath);
+      _sendJson({'type': 'file-ack'});
     }
+
+    if (webMode) {
+      _bytesBuilder = BytesBuilder(copy: false);
+      if (initialBytes != null) _bytesBuilder!.add(initialBytes!);
+    } else {
+      _sink = File(savePath!).openWrite(
+        mode: isResume ? FileMode.append : FileMode.write,
+      );
+    }
+    _bytesReceived = resumeFromByte;
+
+    // The hash must cover the *whole* file, matching the sender's
+    // replay-then-continue hash, so the final SHA-256 comparison is
+    // meaningful on a resume: seed it with the already-known pre-resume
+    // bytes before the loop below adds anything new.
     final sha256 = _Sha256Sink();
+    if (isResume) {
+      if (webMode) {
+        sha256.add(initialBytes!);
+      } else {
+        await for (final chunk in File(resumeSavePath!).openRead(0, resumeFromByte)) {
+          sha256.add(chunk);
+        }
+      }
+      // Yield once before signaling resume: a real RTCDataChannel is
+      // inherently async, but the in-memory fake channel used in tests
+      // sends synchronously, so without this yield a resume message sent
+      // here (before returning control to the caller) can race ahead of
+      // the sender's listener subscribing and be dropped on the broadcast
+      // stream (no buffering for late subscribers).
+      await Future<void>.value();
+      _sendJson({'type': 'resume', 'bytesReceived': resumeFromByte});
+    }
     String? receivedHash;
-    var bytesReceived = 0;
 
     await for (final msg in _messages) {
       if (msg.isBinary) {
         final data = msg.binary;
-        sink?.add(data);
-        bytesBuilder?.add(data);
+        _sink?.add(data);
+        _bytesBuilder?.add(data);
         sha256.add(data);
-        bytesReceived += data.length;
-        onProgress?.call(bytesReceived);
+        _bytesReceived += data.length;
+        onProgress?.call(_bytesReceived);
         continue;
       }
       final decoded = jsonDecode(msg.text) as Map<String, dynamic>;
@@ -204,8 +294,8 @@ class FileReceiver {
       }
     }
 
-    await sink?.flush();
-    await sink?.close();
+    await _sink?.flush();
+    await _sink?.close();
 
     final computed = sha256.hexDigest();
     final hashMatch = receivedHash == computed;
@@ -216,7 +306,7 @@ class FileReceiver {
         receivedHash ?? '',
         computed,
         hashMatch,
-        bytes: bytesBuilder!.takeBytes(),
+        bytes: _bytesBuilder!.takeBytes(),
         fileName: fileName,
       );
     }
