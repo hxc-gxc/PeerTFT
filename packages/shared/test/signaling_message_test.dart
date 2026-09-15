@@ -14,6 +14,30 @@ void main() {
       expect((decoded as JoinRoom).code, message.code);
     });
 
+    test('JoinRoom with a reconnectToken round-trips it', () {
+      const message = JoinRoom('renard-bureau-lampe-zenith', reconnectToken: 'peer-old-1');
+      final decoded = SignalingMessage.fromJson(
+        jsonDecode(jsonEncode(message.toJson())) as Map<String, dynamic>,
+      );
+      expect(decoded, isA<JoinRoom>());
+      expect((decoded as JoinRoom).reconnectToken, 'peer-old-1');
+    });
+
+    test('JoinRoom without a reconnectToken decodes it as null', () {
+      const message = JoinRoom('renard-bureau-lampe-zenith');
+      final decoded = SignalingMessage.fromJson(
+        jsonDecode(jsonEncode(message.toJson())) as Map<String, dynamic>,
+      );
+      expect((decoded as JoinRoom).reconnectToken, isNull);
+    });
+
+    test('PeerReconnecting has no payload', () {
+      expect(
+        SignalingMessage.fromJson(const PeerReconnecting().toJson()),
+        isA<PeerReconnecting>(),
+      );
+    });
+
     test('RoomJoined', () {
       const message = RoomJoined('peer-123');
       final decoded = SignalingMessage.fromJson(message.toJson());

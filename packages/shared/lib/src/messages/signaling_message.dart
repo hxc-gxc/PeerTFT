@@ -22,6 +22,7 @@ sealed class SignalingMessage {
       'roomJoined' => RoomJoined.fromJson(json),
       'peerConnected' => PeerConnected.fromJson(json),
       'peerDisconnected' => const PeerDisconnected(),
+      'peerReconnecting' => const PeerReconnecting(),
       'roomError' => RoomError.fromJson(json),
       'relay' => RelayMessage.fromJson(json),
       _ => throw FormatException('Unknown signaling message type: $type'),
@@ -32,15 +33,25 @@ sealed class SignalingMessage {
 /// Sent by a client to create or join a room identified by a human-readable
 /// [code] (see `codes/code_generator.dart`).
 final class JoinRoom extends SignalingMessage {
-  const JoinRoom(this.code);
+  const JoinRoom(this.code, {this.reconnectToken});
 
   final String code;
+  /// The peerId this client was issued on a previous join to this same room,
+  /// presented so the server can restore a `_Pending` slot instead of
+  /// treating this as a brand-new stranger. `null` on a first-ever join.
+  final String? reconnectToken;
 
-  factory JoinRoom.fromJson(Map<String, dynamic> json) =>
-      JoinRoom(json['code'] as String);
+  factory JoinRoom.fromJson(Map<String, dynamic> json) => JoinRoom(
+    json['code'] as String,
+    reconnectToken: json['reconnectToken'] as String?,
+  );
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'joinRoom', 'code': code};
+  Map<String, dynamic> toJson() => {
+    'type': 'joinRoom',
+    'code': code,
+    if (reconnectToken != null) 'reconnectToken': reconnectToken,
+  };
 }
 
 /// Server response confirming a [JoinRoom]; [peerId] is a random, ephemeral
@@ -81,6 +92,17 @@ final class PeerDisconnected extends SignalingMessage {
 
   @override
   Map<String, dynamic> toJson() => {'type': 'peerDisconnected'};
+}
+
+/// Sent to the surviving peer the instant the other peer's transport drops,
+/// starting a grace window during which a reconnect can still resume the
+/// session. Followed by either [PeerConnected] (the peer came back in time)
+/// or [PeerDisconnected] (the grace window lapsed).
+final class PeerReconnecting extends SignalingMessage {
+  const PeerReconnecting();
+
+  @override
+  Map<String, dynamic> toJson() => {'type': 'peerReconnecting'};
 }
 
 /// Terminal error for the current room/connection attempt.
