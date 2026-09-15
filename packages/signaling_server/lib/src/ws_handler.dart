@@ -60,7 +60,11 @@ class ConnectionHandler {
         _handleJoinRoom(message);
       case RelayMessage():
         _handleRelay(message);
-      case RoomJoined() || PeerConnected() || PeerDisconnected() || RoomError():
+      case RoomJoined() ||
+          PeerConnected() ||
+          PeerDisconnected() ||
+          PeerReconnecting() ||
+          RoomError():
         // Server-to-client-only messages; a client sending one is ignored.
         break;
     }
@@ -82,7 +86,11 @@ class ConnectionHandler {
     }
 
     try {
-      roomManager.join(code: message.code, handle: _handle);
+      roomManager.join(
+        code: message.code,
+        handle: _handle,
+        reconnectToken: message.reconnectToken,
+      );
     } on RoomManagerException catch (e) {
       _send(RoomError(e.reason));
       channel.sink.close();
