@@ -7,6 +7,7 @@ import '../state/transfer_session.dart';
 import '../theme/app_theme.dart';
 import 'complete_page.dart';
 import 'widgets/app_scaffold.dart';
+import 'widgets/countdown_text.dart';
 import 'widgets/decorations.dart';
 import 'widgets/gradient_button.dart';
 import 'widgets/progress_ring.dart';
@@ -82,6 +83,7 @@ class TransferPage extends ConsumerWidget {
               throughputBps,
             ),
           Failed(:final message) => _failedView(context, message, ref),
+          Reconnecting(:final deadline) => _reconnectingView(context, ref, deadline),
           _ => const Center(
               child: CircularProgressIndicator(color: AppTheme.indigo),
             ),
@@ -280,6 +282,43 @@ class TransferPage extends ConsumerWidget {
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
             child: const Text('Retour'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _reconnectingView(BuildContext context, WidgetRef ref, DateTime deadline) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(color: AppTheme.indigo),
+          const SizedBox(height: 20),
+          Text(
+            'Reconnexion en cours…',
+            style: GoogleFonts.baloo2(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.ink,
+            ),
+          ),
+          const SizedBox(height: 8),
+          CountdownText(deadline: deadline),
+          const SizedBox(height: 24),
+          TextButton(
+            onPressed: () {
+              ref.read(transferSessionProvider.notifier).cancel();
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            child: Text(
+              'Annuler',
+              style: GoogleFonts.nunito(
+                color: AppTheme.indigo,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
           ),
         ],
       ),
