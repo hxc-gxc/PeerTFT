@@ -172,6 +172,10 @@ class TransferSession extends Notifier<TransferState> {
   Future<void> _handleSignalingDrop() async {
     if (state is Transferring || state is Negotiating) {
       await _captureResumeState();
+      // The ICE-drop trigger (_onConnectionLost) runs synchronously and could
+      // have already claimed Reconnecting while the await above was in
+      // flight -- re-check instead of unconditionally overwriting it.
+      if (state is Reconnecting) return;
       _stallTimer?.cancel();
       final deadline = DateTime.now().add(const Duration(seconds: 30));
       state = Reconnecting(deadline: deadline);
@@ -244,6 +248,9 @@ class TransferSession extends Notifier<TransferState> {
       case PeerReconnecting():
         if (state is Transferring || state is Negotiating) {
           unawaited(_captureResumeState().then((_) {
+            // Same race guard as _handleSignalingDrop: the ICE-drop trigger
+            // could have already claimed Reconnecting while this awaited.
+            if (state is Reconnecting) return;
             _stallTimer?.cancel();
             state = Reconnecting(deadline: DateTime.now().add(const Duration(seconds: 30)));
             // Nothing to retry locally -- this side's own signaling
@@ -350,7 +357,15 @@ class TransferSession extends Notifier<TransferState> {
   }
 
   void _onConnectionLost(String remotePeerId) {
-    if (state is Reconnecting) return; // the signaling-drop path already has this covered
+    // Only a drop mid-transfer is worth resuming. Without this guard, an ICE
+    // state change that fires *after* a successful Complete (e.g. the other
+    // peer closing its RTCPeerConnection during normal post-transfer
+    // cleanup) would silently overwrite Complete with Reconnecting, then
+    // Failed 30s later -- corrupting an already-finished transfer's result.
+    // This also covers "the signaling-drop path already claimed
+    // Reconnecting", since Reconnecting is neither Transferring nor
+    // Negotiating.
+    if (state is! Transferring && state is! Negotiating) return;
     _stallTimer?.cancel();
     final deadline = DateTime.now().add(const Duration(seconds: 30));
     state = Reconnecting(deadline: deadline);
