@@ -90,23 +90,29 @@ void main() {
     test(
       'disconnect on a paired room starts the grace period, not an immediate teardown',
       () {
-        final manager = RoomManager();
-        final a = _FakeHandle('a');
-        final b = _FakeHandle('b');
-        manager.join(code: 'code', handle: a);
-        manager.join(code: 'code', handle: b);
+        fakeAsync((async) {
+          final manager = RoomManager();
+          final a = _FakeHandle('a');
+          final b = _FakeHandle('b');
+          manager.join(code: 'code', handle: a);
+          manager.join(code: 'code', handle: b);
 
-        manager.disconnect(code: 'code', peerId: 'a');
-        expect(b.received.last, isA<PeerReconnecting>());
-        expect(manager.roomCount, 1); // still tracked during the grace window
+          manager.disconnect(code: 'code', peerId: 'a');
+          expect(b.received.last, isA<PeerReconnecting>());
+          expect(manager.roomCount, 1); // still tracked during the grace window
 
-        // a's slot is pending, not active: a stray relay targeting it is a
-        // no-op, not a crash.
-        manager.relay(
-          code: 'code',
-          fromPeerId: 'b',
-          message: const RelayMessage(targetPeerId: 'a', payload: 'x'),
-        );
+          // a's slot is pending, not active: a stray relay targeting it is a
+          // no-op, not a crash.
+          manager.relay(
+            code: 'code',
+            fromPeerId: 'b',
+            message: const RelayMessage(targetPeerId: 'a', payload: 'x'),
+          );
+
+          // Drain the pending grace-period timer so it doesn't leak past the
+          // test (it fires a no-op _expirePending on an already-verified room).
+          async.elapse(const Duration(seconds: 31));
+        });
       },
     );
 
