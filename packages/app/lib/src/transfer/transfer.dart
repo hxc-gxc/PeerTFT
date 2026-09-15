@@ -180,6 +180,13 @@ class FileSender {
 /// Protocol: wait for `file-meta` → ask caller for save path via callback →
 /// send `file-ack` → stream binary chunks to disk + hash → on `file-end`
 /// compare hashes. The file is streamed to disk, never full file in memory.
+///
+/// Single-use: call [receive] exactly once per instance. `_bytesReceived`,
+/// `_sink` and `_bytesBuilder` are populated during that one call, not reset
+/// between calls — a second call would append into a stale sink or a
+/// leftover `BytesBuilder`. To resume a transfer, construct a new
+/// `FileReceiver` (with `resumeFromByte`/`initialBytes` set) rather than
+/// calling `receive()` again on the same one.
 class FileReceiver {
   FileReceiver(
     this._channel,
