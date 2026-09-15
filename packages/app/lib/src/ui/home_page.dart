@@ -30,8 +30,6 @@ class HomePage extends ConsumerWidget {
           ),
         ),
         actions: [
-          const AvatarBadge(size: 38),
-          const SizedBox(width: 8),
           IconButton(
             onPressed: () => showAboutDialog(
               context: context,

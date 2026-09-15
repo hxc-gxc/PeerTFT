@@ -139,20 +139,9 @@ class _SendPageState extends ConsumerState<SendPage> {
       bottomNavigationBar: state is Idle
           ? PeerBottomNavBar(
               currentTab: NavTab.envoyer,
-              onTabSelected: (tab) {
-                if (tab == NavTab.recevoir) {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const ReceivePage()),
-                  );
-                } else if (tab == NavTab.historique ||
-                    tab == NavTab.parametres) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${tab.name} sera disponible bientôt'),
-                    ),
-                  );
-                }
-              },
+              onTabSelected: (_) => Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const ReceivePage()),
+              ),
             )
           : null,
       body: Padding(

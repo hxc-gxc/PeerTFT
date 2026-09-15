@@ -3,9 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/app_theme.dart';
 
-enum NavTab { envoyer, recevoir, historique, parametres }
+enum NavTab { envoyer, recevoir }
 
-/// Bottom navigation bar matching the mockups (4 tabs with active pill indicator)
+/// Bottom navigation bar matching the mockups (2 tabs with active pill
+/// indicator). Historique/Paramètres are intentionally not tabs here yet --
+/// they have no implementation behind them.
 class PeerBottomNavBar extends StatelessWidget {
   const PeerBottomNavBar({
     super.key,
@@ -45,22 +47,6 @@ class PeerBottomNavBar extends StatelessWidget {
               label: 'Recevoir',
               isSelected: currentTab == NavTab.recevoir,
               onTap: () => onTabSelected(NavTab.recevoir),
-            ),
-          ),
-          Expanded(
-            child: _NavItem(
-              icon: Icons.history_rounded,
-              label: 'Historique',
-              isSelected: currentTab == NavTab.historique,
-              onTap: () => onTabSelected(NavTab.historique),
-            ),
-          ),
-          Expanded(
-            child: _NavItem(
-              icon: Icons.settings_outlined,
-              label: 'Paramètres',
-              isSelected: currentTab == NavTab.parametres,
-              onTap: () => onTabSelected(NavTab.parametres),
             ),
           ),
         ],

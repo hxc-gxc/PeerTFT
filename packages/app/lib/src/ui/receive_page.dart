@@ -45,8 +45,6 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
       }
     });
 
-    final isWaiting = state is WaitingForPeer;
-
     return AppScaffold(
       backdrop: const Stack(
         children: [
@@ -108,20 +106,9 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
       bottomNavigationBar: state is Idle
           ? PeerBottomNavBar(
               currentTab: NavTab.recevoir,
-              onTabSelected: (tab) {
-                if (tab == NavTab.envoyer) {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const SendPage()),
-                  );
-                } else if (tab == NavTab.historique ||
-                    tab == NavTab.parametres) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${tab.name} sera disponible bientôt'),
-                    ),
-                  );
-                }
-              },
+              onTabSelected: (_) => Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const SendPage()),
+              ),
             )
           : null,
       body: Padding(
@@ -211,14 +198,6 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
-                  suffixIcon: IconButton(
-                    icon: const Icon(
-                      Icons.qr_code_scanner_rounded,
-                      color: Color(0xFFFF6B8B),
-                      size: 24,
-                    ),
-                    onPressed: _openQrScanner,
-                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -226,14 +205,6 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
                 label: 'Rejoindre le transfert',
                 colors: const [Color(0xFF582BE8), Color(0xFF7C3AED)],
                 onPressed: _join,
-              ),
-              const SizedBox(height: 12),
-              GradientButton(
-                label: 'Scanner un QR code',
-                isOutlined: true,
-                outlineColor: const Color(0xFF4EEDB2),
-                textColor: const Color(0xFF059669),
-                onPressed: _openQrScanner,
               ),
               const SizedBox(height: 22),
               // Carousel / Indicator dots matching Mockup 4
@@ -260,12 +231,6 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
       height: 7,
       decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
-  }
-
-  void _openQrScanner() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Scanner QR à venir')));
   }
 
   Widget _waitingView(String code) {
