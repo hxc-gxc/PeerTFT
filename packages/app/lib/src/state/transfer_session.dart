@@ -610,6 +610,12 @@ class TransferSession extends Notifier<TransferState> {
   }
 
   Future<void> _cancelInternal() async {
+    // Invalidate any in-flight negotiation attempt first: without this, a
+    // _runSender/_runReceiver call that's already past _negotiateWebRtc's
+    // dispose/init point when the user taps "Annuler" could still complete
+    // afterward and, since its captured myGeneration would otherwise still
+    // match, overwrite the user's Idle with Complete/Failed.
+    _generation++;
     _stallTimer?.cancel();
     _stallTimer = null;
     await _localPayloadsSub?.cancel();
