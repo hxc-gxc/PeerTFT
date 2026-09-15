@@ -1,10 +1,27 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:app/src/transfer/transfer.dart';
+import 'package:app/src/platform/web_save.dart';
+
+class _FakeWebWritableSink implements WebWritableSink {
+  final writes = <Uint8List>[];
+  int closeCalls = 0;
+  int abortCalls = 0;
+
+  @override
+  Future<void> write(Uint8List chunk) async => writes.add(chunk);
+
+  @override
+  Future<void> close() async => closeCalls++;
+
+  @override
+  Future<void> abort() async => abortCalls++;
+}
 
 /// Minimal in-memory RTCDataChannel: send() pipes messages to an output
 /// StreamController that the other side reads from. bufferedAmount is always 0
@@ -50,6 +67,7 @@ class _FakeChannel extends RTCDataChannel {
   String? resumeSavePath,
   Uint8List? initialBytes,
   void Function(String, int, String?)? onMeta,
+  WebWritableSink? webSink,
 }) {
   final s2r = StreamController<RTCDataChannelMessage>.broadcast();
   final r2s = StreamController<RTCDataChannelMessage>.broadcast();
@@ -64,6 +82,7 @@ class _FakeChannel extends RTCDataChannel {
     resumeFileName: resumeFileName,
     resumeSavePath: resumeSavePath,
     initialBytes: initialBytes,
+    webSink: webSink,
   );
 
   return (sender: sender, receiver: receiver);
@@ -210,6 +229,66 @@ void main() {
       await (sender.sendBytes('r.bin', full), receiverFuture).wait;
 
       expect(metaCalls, 0);
+    });
+
+    test('webSink: chunks arrive in order, hash matches, close() called once', () async {
+      final fakeSink = _FakeWebWritableSink();
+      final (:sender, :receiver) = _makePipe(webSink: fakeSink);
+      final bytes = Uint8List.fromList(
+        List.generate(50 * 1024, (i) => (i * 3 + 1) % 256),
+      );
+
+      final receiverFuture = receiver.receive();
+      final (_, receiveResult) = await (
+        sender.sendBytes('big.bin', bytes),
+        receiverFuture,
+      ).wait;
+
+      expect(receiveResult!.hashMatch, isTrue);
+      expect(receiveResult.savedPath, isNull);
+      expect(receiveResult.bytes, isNull); // nothing to hand to webDownload()
+      expect(receiveResult.fileName, 'big.bin');
+      // Chunks arrived in order and concatenate back to the original bytes.
+      final reassembled = BytesBuilder(copy: false);
+      for (final chunk in fakeSink.writes) {
+        reassembled.add(chunk);
+      }
+      expect(reassembled.toBytes(), bytes);
+      expect(fakeSink.closeCalls, 1);
+      expect(fakeSink.abortCalls, 0);
+    });
+
+    test('webSink: connection dropped mid-transfer aborts the sink and returns null', () async {
+      final fakeSink = _FakeWebWritableSink();
+      final s2r = StreamController<RTCDataChannelMessage>.broadcast();
+      final r2s = StreamController<RTCDataChannelMessage>.broadcast();
+      final receiver = FileReceiver(
+        _FakeChannel(r2s),
+        s2r.stream,
+        null,
+        webSink: fakeSink,
+      );
+
+      final receiverFuture = receiver.receive();
+      // Simulate a sender that sends meta + one chunk, then the channel
+      // just dies -- no file-end ever arrives.
+      s2r.add(
+        RTCDataChannelMessage(
+          jsonEncode({'type': 'file-meta', 'name': 'x.bin', 'size': 999}),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      s2r.add(RTCDataChannelMessage.fromBinary(Uint8List.fromList([1, 2, 3])));
+      await Future<void>.delayed(Duration.zero);
+      await s2r.close();
+
+      final result = await receiverFuture;
+      expect(result, isNull);
+      expect(fakeSink.writes, [
+        Uint8List.fromList([1, 2, 3]),
+      ]);
+      expect(fakeSink.abortCalls, 1);
+      expect(fakeSink.closeCalls, 0);
     });
   });
 }

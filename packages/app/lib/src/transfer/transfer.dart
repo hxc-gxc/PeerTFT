@@ -6,6 +6,8 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import '../platform/web_save.dart';
+
 /// Result of a completed send.
 class SendResult {
   const SendResult(this.sha256Hex, this.bytesSent);
@@ -208,9 +210,15 @@ class FileReceiver {
     this.resumeFileName,
     this.resumeSavePath,
     this.initialBytes,
+    this.webSink,
   }) : assert(
          resumeFromByte == 0 || (resumeFileName != null),
          'resumeFileName is required whenever resumeFromByte > 0',
+       ),
+       assert(
+         webSink == null || resumeFromByte == 0,
+         'webSink-based receives do not support resume -- TransferSession '
+         'must never construct one this way (see its _webSink-aware guards)',
        );
 
   final RTCDataChannel _channel;
@@ -226,6 +234,7 @@ class FileReceiver {
   final String? resumeFileName;
   final String? resumeSavePath;
   final Uint8List? initialBytes; // web only; seeds the BytesBuilder
+  final WebWritableSink? webSink;
 
   int _bytesReceived = 0;
   IOSink? _sink;
@@ -262,7 +271,11 @@ class FileReceiver {
       _sendJson({'type': 'file-ack'});
     }
 
-    if (webMode) {
+    if (webSink != null) {
+      // Already open -- the caller obtained it from the browser's save
+      // picker before this receive even started (see receive_page.dart).
+      // Nothing to initialize here.
+    } else if (webMode) {
       _bytesBuilder = BytesBuilder(copy: false);
       if (initialBytes != null) _bytesBuilder!.add(initialBytes!);
     } else {
@@ -301,8 +314,12 @@ class FileReceiver {
     await for (final msg in _messages) {
       if (msg.isBinary) {
         final data = msg.binary;
-        _sink?.add(data);
-        _bytesBuilder?.add(data);
+        if (webSink != null) {
+          await webSink!.write(data);
+        } else {
+          _sink?.add(data);
+          _bytesBuilder?.add(data);
+        }
         sha256.add(data);
         _bytesReceived += data.length;
         onProgress?.call(_bytesReceived);
@@ -317,6 +334,33 @@ class FileReceiver {
 
     await _sink?.flush();
     await _sink?.close();
+
+    if (webSink != null) {
+      if (receivedHash == null) {
+        // Stream ended without ever seeing file-end (peer dropped
+        // mid-transfer). Unlike the native/BytesBuilder branches above,
+        // which unconditionally flush/close regardless of how the loop
+        // ended, an open FileSystemWritableFileStream left un-closed holds
+        // an OS-level lock on the destination file -- abort discards the
+        // partial write. TransferSession's result==null handler must NOT
+        // call abort() again on this same sink; it only nulls out its own
+        // reference.
+        await webSink!.abort();
+        return null;
+      }
+      await webSink!.close();
+      final computed = sha256.hexDigest();
+      return ReceiveResult(
+        null,
+        receivedHash,
+        computed,
+        receivedHash == computed,
+        fileName: fileName,
+        // no `bytes:` populated -- nothing to hand to webDownload(), the
+        // browser already has the file on disk via the FileSystemFileHandle
+        // the user picked before the transfer started.
+      );
+    }
 
     final computed = sha256.hexDigest();
     final hashMatch = receivedHash == computed;
