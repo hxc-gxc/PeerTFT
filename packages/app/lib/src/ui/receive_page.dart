@@ -1,8 +1,12 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../platform/web_save.dart';
+import '../platform/web_save_stub.dart'
+    if (dart.library.html) '../platform/web_save_web.dart';
 import '../state/transfer_session.dart';
 import '../theme/app_theme.dart';
 import 'send_page.dart';
@@ -340,10 +344,18 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
     );
   }
 
-  void _join() {
+  Future<void> _join() async {
     final code = _codeController.text.trim();
     if (code.isEmpty) return;
+    WebWritableSink? webSink;
+    if (kIsWeb) {
+      webSink = await pickWebSink(code); // first await in this handler --
+      // showSaveFilePicker() needs transient user activation, which this
+      // call must still be holding; see web_save_web.dart's doc comment.
+    }
     _started = true;
-    ref.read(transferSessionProvider.notifier).startReceive(code);
+    ref
+        .read(transferSessionProvider.notifier)
+        .startReceive(code, webSink: webSink);
   }
 }
