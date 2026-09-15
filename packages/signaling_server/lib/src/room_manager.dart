@@ -27,7 +27,8 @@ class _Active extends _Slot {
 
 class _Pending extends _Slot {
   _Pending(this.peerId, this.timer);
-  final String peerId; // the peerId that dropped, used to match a reconnectToken
+  final String
+  peerId; // the peerId that dropped, used to match a reconnectToken
   final Timer timer;
 }
 

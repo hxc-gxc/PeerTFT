@@ -28,10 +28,7 @@ class ProgressRing extends StatelessWidget {
             size: Size(size, size),
             painter: _RingPainter(progress.clamp(0, 1)),
           ),
-          Padding(
-            padding: const EdgeInsets.all(28),
-            child: child,
-          ),
+          Padding(padding: const EdgeInsets.all(28), child: child),
         ],
       ),
     );

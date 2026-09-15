@@ -30,7 +30,8 @@ class GradientButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final disabled = onPressed == null;
-    final effectiveTextColor = textColor ??
+    final effectiveTextColor =
+        textColor ??
         (isOutlined
             ? (outlineColor ?? Theme.of(context).colorScheme.primary)
             : Colors.white);

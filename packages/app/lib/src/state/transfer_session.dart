@@ -191,7 +191,9 @@ class TransferSession extends Notifier<TransferState> {
   Future<void> _attemptReconnect(DateTime deadline) async {
     var backoff = const Duration(seconds: 2);
     while (DateTime.now().isBefore(deadline)) {
-      if (state is! Reconnecting) return; // superseded by a successful PeerConnected
+      if (state is! Reconnecting) {
+        return; // superseded by a successful PeerConnected
+      }
 
       try {
         final signaling = SignalingClient.connect(_signalingWsUri);
@@ -214,7 +216,9 @@ class TransferSession extends Notifier<TransferState> {
       }
       await Future<void>.delayed(backoff);
       backoff *= 2;
-      if (backoff > const Duration(seconds: 8)) backoff = const Duration(seconds: 8);
+      if (backoff > const Duration(seconds: 8)) {
+        backoff = const Duration(seconds: 8);
+      }
     }
     if (state is Reconnecting) {
       state = const Failed('Connexion perdue.');
@@ -226,7 +230,9 @@ class TransferSession extends Notifier<TransferState> {
     switch (message) {
       case RoomJoined():
         _myPeerId = message.peerId;
-        if (state is Reconnecting) return; // stay put until PeerConnected/PeerDisconnected
+        if (state is Reconnecting) {
+          return; // stay put until PeerConnected/PeerDisconnected
+        }
         state = WaitingForPeer(code: _code ?? '', isInitiator: _isInitiator);
       case PeerConnected():
         // Captured *before* the state overwrite below -- this is the only
@@ -239,23 +245,31 @@ class TransferSession extends Notifier<TransferState> {
         _remotePeerId = message.remotePeerId;
         state = const Negotiating();
         unawaited(
-          _negotiateWebRtc(message.remotePeerId, isResume: resuming).then((success) {
+          _negotiateWebRtc(message.remotePeerId, isResume: resuming).then((
+            success,
+          ) {
             if (!success) {
-              state = const Failed('Connexion directe impossible sur ce réseau.');
+              state = const Failed(
+                'Connexion directe impossible sur ce réseau.',
+              );
             }
           }),
         );
       case PeerReconnecting():
         if (state is Transferring || state is Negotiating) {
-          unawaited(_captureResumeState().then((_) {
-            // Same race guard as _handleSignalingDrop: the ICE-drop trigger
-            // could have already claimed Reconnecting while this awaited.
-            if (state is Reconnecting) return;
-            _stallTimer?.cancel();
-            state = Reconnecting(deadline: DateTime.now().add(const Duration(seconds: 30)));
-            // Nothing to retry locally -- this side's own signaling
-            // connection is fine. Just wait for PeerConnected/PeerDisconnected.
-          }));
+          unawaited(
+            _captureResumeState().then((_) {
+              // Same race guard as _handleSignalingDrop: the ICE-drop trigger
+              // could have already claimed Reconnecting while this awaited.
+              if (state is Reconnecting) return;
+              _stallTimer?.cancel();
+              state = Reconnecting(
+                deadline: DateTime.now().add(const Duration(seconds: 30)),
+              );
+              // Nothing to retry locally -- this side's own signaling
+              // connection is fine. Just wait for PeerConnected/PeerDisconnected.
+            }),
+          );
         }
       case RelayMessage():
         final payload = WebRtcPayload.decode(message.payload);
@@ -308,7 +322,8 @@ class TransferSession extends Notifier<TransferState> {
     final webrtc = WebRtcConnection(stunUri: _stunUri, timeout: timeout);
     _webrtc = webrtc;
     _localPayloadsSub = webrtc.localPayloads.listen(
-      (payload) => signaling.sendRelay(targetPeerId: remotePeerId, payload: payload),
+      (payload) =>
+          signaling.sendRelay(targetPeerId: remotePeerId, payload: payload),
     );
     await webrtc.initialize(isInitiator: _isInitiator);
 
@@ -332,16 +347,20 @@ class TransferSession extends Notifier<TransferState> {
     if (channel == null) return false;
 
     final myGeneration = ++_generation;
-    _connectionLostSub = webrtc.connectionLost.listen((_) => _onConnectionLost(remotePeerId));
+    _connectionLostSub = webrtc.connectionLost.listen(
+      (_) => _onConnectionLost(remotePeerId),
+    );
     _throughputWindow.clear();
     final resume = _pendingResume;
     _pendingResume = null;
 
     if (_isInitiator) {
       _lastTransferred = 0; // sender's own counter; resume offset comes from
-                             // the receiver's wire message, not this field
-                             // -- isResume is threaded through separately, below.
-      unawaited(_runSender(channel, webrtc.dataChannelMessages, myGeneration, isResume));
+      // the receiver's wire message, not this field
+      // -- isResume is threaded through separately, below.
+      unawaited(
+        _runSender(channel, webrtc.dataChannelMessages, myGeneration, isResume),
+      );
     } else {
       _lastTransferred = resume?.resumeFromByte ?? 0;
       if (resume != null) {
@@ -351,7 +370,9 @@ class TransferSession extends Notifier<TransferState> {
           transferredBytes: _lastTransferred,
         );
       }
-      unawaited(_runReceiver(channel, webrtc.dataChannelMessages, myGeneration, resume));
+      unawaited(
+        _runReceiver(channel, webrtc.dataChannelMessages, myGeneration, resume),
+      );
     }
     return true;
   }
@@ -375,12 +396,21 @@ class TransferSession extends Notifier<TransferState> {
   // Every call into this method follows a *post-success* connectionLost
   // event (see _onConnectionLost above), so isResume: true unconditionally
   // -- there is no "fresh connect" case reachable through this path.
-  Future<void> _attemptWebRtcResume(String remotePeerId, DateTime deadline) async {
+  Future<void> _attemptWebRtcResume(
+    String remotePeerId,
+    DateTime deadline,
+  ) async {
     await _captureResumeState();
     var backoff = const Duration(seconds: 2);
     while (DateTime.now().isBefore(deadline)) {
       if (state is! Reconnecting) return;
-      if (await _negotiateWebRtc(remotePeerId, timeout: const Duration(seconds: 8), isResume: true)) return;
+      if (await _negotiateWebRtc(
+        remotePeerId,
+        timeout: const Duration(seconds: 8),
+        isResume: true,
+      )) {
+        return;
+      }
       await Future<void>.delayed(backoff);
       backoff *= 2;
     }
@@ -394,7 +424,12 @@ class TransferSession extends Notifier<TransferState> {
   Timer? _stallTimer;
   int _lastTransferred = 0;
 
-  void _onProgress(String fileName, int totalBytes, int transferred, int myGeneration) {
+  void _onProgress(
+    String fileName,
+    int totalBytes,
+    int transferred,
+    int myGeneration,
+  ) {
     if (myGeneration != _generation) return;
     final now = DateTime.now();
     _throughputWindow.add(_ThroughputSample(now, transferred));
@@ -455,7 +490,9 @@ class TransferSession extends Notifier<TransferState> {
         final bytes = _fileBytes;
         final name = _fileName;
         if (bytes == null || name == null) {
-          if (myGeneration == _generation) state = const Failed('Aucun fichier sélectionné.');
+          if (myGeneration == _generation) {
+            state = const Failed('Aucun fichier sélectionné.');
+          }
           return;
         }
         if (myGeneration == _generation && state is! Transferring) {
@@ -475,7 +512,9 @@ class TransferSession extends Notifier<TransferState> {
       } else {
         final filePath = _filePath;
         if (filePath == null) {
-          if (myGeneration == _generation) state = const Failed('Aucun fichier sélectionné.');
+          if (myGeneration == _generation) {
+            state = const Failed('Aucun fichier sélectionné.');
+          }
           return;
         }
         final file = File(filePath);
@@ -551,7 +590,9 @@ class TransferSession extends Notifier<TransferState> {
         hashMatch: result.hashMatch,
       );
     } catch (e) {
-      if (myGeneration == _generation) state = Failed('Erreur de réception: $e');
+      if (myGeneration == _generation) {
+        state = Failed('Erreur de réception: $e');
+      }
     }
   }
 

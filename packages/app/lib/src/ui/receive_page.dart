@@ -109,9 +109,12 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (_) => const SendPage()),
                   );
-                } else if (tab == NavTab.historique || tab == NavTab.parametres) {
+                } else if (tab == NavTab.historique ||
+                    tab == NavTab.parametres) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('${tab.name} sera disponible bientôt')),
+                    SnackBar(
+                      content: Text('${tab.name} sera disponible bientôt'),
+                    ),
                   );
                 }
               },
@@ -122,13 +125,13 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
         child: switch (state) {
           Idle() => _enterCodeView(context),
           Connecting() => const Center(
-              child: CircularProgressIndicator(color: AppTheme.indigo),
-            ),
+            child: CircularProgressIndicator(color: AppTheme.indigo),
+          ),
           WaitingForPeer(:final code) => _waitingView(code),
           Failed(:final message) => _failedView(context, message),
           _ => const Center(
-              child: CircularProgressIndicator(color: AppTheme.indigo),
-            ),
+            child: CircularProgressIndicator(color: AppTheme.indigo),
+          ),
         },
       ),
     );
@@ -251,17 +254,14 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
     return Container(
       width: 7,
       height: 7,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
   }
 
   void _openQrScanner() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Scanner QR à venir')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Scanner QR à venir')));
   }
 
   Widget _waitingView(String code) {
@@ -321,7 +321,10 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SvgPicture.asset('assets/illustrations/no_connection.svg', height: 140),
+          SvgPicture.asset(
+            'assets/illustrations/no_connection.svg',
+            height: 140,
+          ),
           const SizedBox(height: 16),
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: 24),

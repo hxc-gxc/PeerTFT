@@ -94,7 +94,10 @@ class _SendPageState extends ConsumerState<SendPage> {
             ? null
             : [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -121,10 +124,14 @@ class _SendPageState extends ConsumerState<SendPage> {
                   ),
                 ),
                 IconButton(
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Menu')),
+                  onPressed: () => ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Menu'))),
+                  icon: const Icon(
+                    Icons.menu_rounded,
+                    color: AppTheme.ink,
+                    size: 28,
                   ),
-                  icon: const Icon(Icons.menu_rounded, color: AppTheme.ink, size: 28),
                 ),
                 const SizedBox(width: 8),
               ],
@@ -137,9 +144,12 @@ class _SendPageState extends ConsumerState<SendPage> {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (_) => const ReceivePage()),
                   );
-                } else if (tab == NavTab.historique || tab == NavTab.parametres) {
+                } else if (tab == NavTab.historique ||
+                    tab == NavTab.parametres) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('${tab.name} sera disponible bientôt')),
+                    SnackBar(
+                      content: Text('${tab.name} sera disponible bientôt'),
+                    ),
                   );
                 }
               },
@@ -150,13 +160,13 @@ class _SendPageState extends ConsumerState<SendPage> {
         child: switch (state) {
           Idle() => _pickFileView(context),
           Connecting() => const Center(
-              child: CircularProgressIndicator(color: AppTheme.indigo),
-            ),
+            child: CircularProgressIndicator(color: AppTheme.indigo),
+          ),
           WaitingForPeer(:final code) => _waitingView(context, code),
           Failed(:final message) => _failedView(context, message),
           _ => const Center(
-              child: CircularProgressIndicator(color: AppTheme.indigo),
-            ),
+            child: CircularProgressIndicator(color: AppTheme.indigo),
+          ),
         },
       ),
     );
@@ -234,7 +244,10 @@ class _SendPageState extends ConsumerState<SendPage> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFF3F0FF),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFDDD6FE), width: 1.2),
+                      border: Border.all(
+                        color: const Color(0xFFDDD6FE),
+                        width: 1.2,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -279,7 +292,8 @@ class _SendPageState extends ConsumerState<SendPage> {
                     label: 'Partager',
                     icon: Icons.share_rounded,
                     colors: const [Color(0xFFFF6B8B), Color(0xFFFF8DA1)],
-                    onPressed: () => SharePlus.instance.share(ShareParams(text: code)),
+                    onPressed: () =>
+                        SharePlus.instance.share(ShareParams(text: code)),
                   ),
                 ],
               ),
@@ -288,7 +302,11 @@ class _SendPageState extends ConsumerState<SendPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.sensors_rounded, size: 20, color: AppTheme.indigo),
+                const Icon(
+                  Icons.sensors_rounded,
+                  size: 20,
+                  color: AppTheme.indigo,
+                ),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
@@ -329,7 +347,10 @@ class _SendPageState extends ConsumerState<SendPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SvgPicture.asset('assets/illustrations/no_connection.svg', height: 140),
+          SvgPicture.asset(
+            'assets/illustrations/no_connection.svg',
+            height: 140,
+          ),
           const SizedBox(height: 16),
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: 24),
@@ -361,13 +382,41 @@ class _SendPageState extends ConsumerState<SendPage> {
   }
 
   List<Widget> _codeReadyDecorations() => [
-    const Positioned(top: 90, left: 24, child: Dot(color: AppTheme.ink, opacity: 0.15)),
-    const Positioned(top: 130, left: 60, child: Dot(color: AppTheme.ink, opacity: 0.15, size: 5)),
-    const Positioned(top: 160, right: 100, child: Dot(color: AppTheme.indigo, opacity: 0.3)),
-    const Positioned(top: 220, right: 40, child: Dot(color: AppTheme.ink, opacity: 0.15)),
-    const Positioned(top: 30, left: 140, child: Dot(color: AppTheme.pink, opacity: 0.25, size: 6)),
-    const Positioned(bottom: 260, left: 30, child: Dot(color: AppTheme.mint, opacity: 0.3, size: 6)),
-    const Positioned(bottom: 60, right: 60, child: Dot(color: AppTheme.ink, opacity: 0.15)),
+    const Positioned(
+      top: 90,
+      left: 24,
+      child: Dot(color: AppTheme.ink, opacity: 0.15),
+    ),
+    const Positioned(
+      top: 130,
+      left: 60,
+      child: Dot(color: AppTheme.ink, opacity: 0.15, size: 5),
+    ),
+    const Positioned(
+      top: 160,
+      right: 100,
+      child: Dot(color: AppTheme.indigo, opacity: 0.3),
+    ),
+    const Positioned(
+      top: 220,
+      right: 40,
+      child: Dot(color: AppTheme.ink, opacity: 0.15),
+    ),
+    const Positioned(
+      top: 30,
+      left: 140,
+      child: Dot(color: AppTheme.pink, opacity: 0.25, size: 6),
+    ),
+    const Positioned(
+      bottom: 260,
+      left: 30,
+      child: Dot(color: AppTheme.mint, opacity: 0.3, size: 6),
+    ),
+    const Positioned(
+      bottom: 60,
+      right: 60,
+      child: Dot(color: AppTheme.ink, opacity: 0.15),
+    ),
     const Positioned(
       top: 60,
       right: -30,
@@ -480,7 +529,10 @@ class _FileChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06), width: 1.2),
+        border: Border.all(
+          color: Colors.black.withValues(alpha: 0.06),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -503,7 +555,11 @@ class _FileChip extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Center(
-              child: Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 24),
+              child: Icon(
+                Icons.picture_as_pdf_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
           ),
           const SizedBox(width: 14),

@@ -73,10 +73,7 @@ abstract final class AppTheme {
         fontWeight: FontWeight.w600,
         color: ink.withValues(alpha: 0.6),
       ),
-      labelLarge: GoogleFonts.baloo2(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-      ),
+      labelLarge: GoogleFonts.baloo2(fontSize: 16, fontWeight: FontWeight.w700),
     );
 
     return ThemeData(
@@ -106,7 +103,10 @@ abstract final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(cardRadius),
           ),
-          textStyle: GoogleFonts.baloo2(fontSize: 16, fontWeight: FontWeight.w700),
+          textStyle: GoogleFonts.baloo2(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -117,7 +117,10 @@ abstract final class AppTheme {
           ),
           side: const BorderSide(color: mint, width: 2),
           foregroundColor: mint,
-          textStyle: GoogleFonts.baloo2(fontSize: 16, fontWeight: FontWeight.w700),
+          textStyle: GoogleFonts.baloo2(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(

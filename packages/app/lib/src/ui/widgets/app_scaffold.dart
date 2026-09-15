@@ -30,9 +30,7 @@ class AppScaffold extends StatelessWidget {
         children: [
           // Full-bleed decorative backdrop, pointer-transparent
           if (backdrop != null)
-            Positioned.fill(
-              child: IgnorePointer(child: backdrop!),
-            ),
+            Positioned.fill(child: IgnorePointer(child: backdrop!)),
           // Constrained content column, anchored at top-center
           Align(
             alignment: Alignment.topCenter,

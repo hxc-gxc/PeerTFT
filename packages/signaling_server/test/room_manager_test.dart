@@ -143,12 +143,17 @@ void main() {
           final a = _FakeHandle('a');
           final b = _FakeHandle('b');
           manager.join(code: 'code', handle: a);
-          manager.join(code: 'code', handle: b); // room now full (everConnected)
+          manager.join(
+            code: 'code',
+            handle: b,
+          ); // room now full (everConnected)
 
           manager.disconnect(code: 'code', peerId: 'a');
           expect(b.received.last, isA<PeerReconnecting>());
 
-          async.elapse(const Duration(seconds: 10)); // well inside the 30s window
+          async.elapse(
+            const Duration(seconds: 10),
+          ); // well inside the 30s window
 
           final aAgain = _FakeHandle('a2');
           manager.join(code: 'code', handle: aAgain, reconnectToken: 'a');
@@ -229,7 +234,9 @@ void main() {
           expect(b.received.last, isA<PeerReconnecting>());
           manager.disconnect(code: 'code', peerId: 'b');
           // a's slot was already pending when b dropped: nobody left to tell.
-          expect(a.received, [isA<PeerConnected>()]); // just the original pairing
+          expect(a.received, [
+            isA<PeerConnected>(),
+          ]); // just the original pairing
 
           async.elapse(const Duration(seconds: 5));
           final bAgain = _FakeHandle('b2');
@@ -250,7 +257,10 @@ void main() {
       () {
         final manager = RoomManager();
         final a = _FakeHandle('a');
-        manager.join(code: 'code', handle: a); // room never fills -> everConnected stays false
+        manager.join(
+          code: 'code',
+          handle: a,
+        ); // room never fills -> everConnected stays false
 
         manager.disconnect(code: 'code', peerId: 'a');
         expect(manager.roomCount, 0); // gone immediately, not _Pending

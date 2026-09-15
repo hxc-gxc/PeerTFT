@@ -8,7 +8,11 @@ import '../../theme/app_theme.dart';
 /// Composed of 3 smooth overlapping organic lobes (violet, coral pink, mint green)
 /// with a glossy specular highlight curve.
 class ReceivingBlobIllustration extends StatelessWidget {
-  const ReceivingBlobIllustration({super.key, this.width = 130, this.height = 90});
+  const ReceivingBlobIllustration({
+    super.key,
+    this.width = 130,
+    this.height = 90,
+  });
 
   final double width;
   final double height;
@@ -247,7 +251,11 @@ class FanFileCards extends StatelessWidget {
     );
   }
 
-  Widget _card({required Color color, required IconData icon, required String badge}) {
+  Widget _card({
+    required Color color,
+    required IconData icon,
+    required String badge,
+  }) {
     return Container(
       width: 44,
       height: 56,
@@ -347,12 +355,7 @@ class _SquigglePainter extends CustomPainter {
 
 /// Small solid dot accent scattered on backgrounds.
 class Dot extends StatelessWidget {
-  const Dot({
-    super.key,
-    required this.color,
-    this.opacity = 1,
-    this.size = 8,
-  });
+  const Dot({super.key, required this.color, this.opacity = 1, this.size = 8});
 
   final Color color;
   final double opacity;
@@ -417,9 +420,21 @@ class AmbientBackdrop extends StatelessWidget {
             ),
           ),
           // Scattered playful accents
-          const Positioned(top: 80, left: 32, child: Dot(color: AppTheme.ink, opacity: 0.1)),
-          const Positioned(top: 200, right: 36, child: Dot(color: AppTheme.ink, opacity: 0.1, size: 6)),
-          Positioned(bottom: 240, right: 60, child: Dot(color: colors[2], opacity: 0.25, size: 8)),
+          const Positioned(
+            top: 80,
+            left: 32,
+            child: Dot(color: AppTheme.ink, opacity: 0.1),
+          ),
+          const Positioned(
+            top: 200,
+            right: 36,
+            child: Dot(color: AppTheme.ink, opacity: 0.1, size: 6),
+          ),
+          Positioned(
+            bottom: 240,
+            right: 60,
+            child: Dot(color: colors[2], opacity: 0.25, size: 8),
+          ),
         ],
       ),
     );
@@ -508,5 +523,6 @@ class _BlobPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _BlobPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _BlobPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

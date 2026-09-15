@@ -43,7 +43,11 @@ class HomePage extends ConsumerWidget {
                 ),
               ],
             ),
-            icon: const Icon(Icons.settings_outlined, color: AppTheme.ink, size: 26),
+            icon: const Icon(
+              Icons.settings_outlined,
+              color: AppTheme.ink,
+              size: 26,
+            ),
           ),
           const SizedBox(width: 16),
         ],
@@ -68,18 +72,18 @@ class HomePage extends ConsumerWidget {
               label: 'Envoyer un fichier',
               icon: Icons.upload_rounded,
               colors: const [Color(0xFF582BE8), Color(0xFF8B5CF6)],
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SendPage()),
-              ),
+              onPressed: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const SendPage())),
             ),
             const SizedBox(height: 16),
             GradientButton(
               label: 'Recevoir un fichier',
               icon: Icons.download_rounded,
               colors: const [Color(0xFFFF6B8B), Color(0xFFFFA5A5)],
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ReceivePage()),
-              ),
+              onPressed: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ReceivePage())),
             ),
             const SizedBox(height: 28),
             const _SecurityBadge(),
@@ -90,7 +94,6 @@ class HomePage extends ConsumerWidget {
     );
   }
 }
-
 
 class _SecurityBadge extends StatelessWidget {
   const _SecurityBadge();

@@ -40,7 +40,12 @@ const _bufferHighWatermark = 1024 * 1024; // 1 MB — backpressure threshold
 /// `file-end` with SHA-256. The file is streamed from disk and hashed
 /// chunk-by-chunk, so it is never fully held in memory.
 class FileSender {
-  FileSender(this._channel, this._messages, {this.onProgress, this.isResume = false});
+  FileSender(
+    this._channel,
+    this._messages, {
+    this.onProgress,
+    this.isResume = false,
+  });
 
   final RTCDataChannel _channel;
   final Stream<RTCDataChannelMessage> _messages;
@@ -76,7 +81,11 @@ class FileSender {
           final toRead = (resumeFrom - replayed).clamp(0, _chunkSize);
           final read = await raf.readInto(replay, 0, toRead);
           if (read <= 0) break;
-          sha256.add(read == replay.length ? replay : Uint8List.view(replay.buffer, 0, read));
+          sha256.add(
+            read == replay.length
+                ? replay
+                : Uint8List.view(replay.buffer, 0, read),
+          );
           replayed += read;
         }
         bytesSent = replayed;
@@ -208,9 +217,11 @@ class FileReceiver {
   final Stream<RTCDataChannelMessage> _messages;
   final Future<String?> Function(String fileName)? savePathProvider;
   final void Function(int bytesReceived)? onProgress;
+
   /// Fires once, on a *fresh* receive only, right after the save path (or
   /// web save-dialog-equivalent) is resolved.
-  final void Function(String fileName, int totalBytes, String? savePath)? onMeta;
+  final void Function(String fileName, int totalBytes, String? savePath)?
+  onMeta;
   final int resumeFromByte;
   final String? resumeFileName;
   final String? resumeSavePath;
@@ -222,7 +233,8 @@ class FileReceiver {
 
   int get bytesReceivedSoFar => _bytesReceived;
   Future<void> flushProgress() => _sink?.flush() ?? Future.value();
-  Uint8List? snapshotBytes() => _bytesBuilder?.toBytes(); // does NOT clear the builder
+  Uint8List? snapshotBytes() =>
+      _bytesBuilder?.toBytes(); // does NOT clear the builder
 
   Future<ReceiveResult?> receive() async {
     final isResume = resumeFromByte > 0;
@@ -254,9 +266,9 @@ class FileReceiver {
       _bytesBuilder = BytesBuilder(copy: false);
       if (initialBytes != null) _bytesBuilder!.add(initialBytes!);
     } else {
-      _sink = File(savePath!).openWrite(
-        mode: isResume ? FileMode.append : FileMode.write,
-      );
+      _sink = File(
+        savePath!,
+      ).openWrite(mode: isResume ? FileMode.append : FileMode.write);
     }
     _bytesReceived = resumeFromByte;
 
@@ -269,7 +281,9 @@ class FileReceiver {
       if (webMode) {
         sha256.add(initialBytes!);
       } else {
-        await for (final chunk in File(resumeSavePath!).openRead(0, resumeFromByte)) {
+        await for (final chunk in File(
+          resumeSavePath!,
+        ).openRead(0, resumeFromByte)) {
           sha256.add(chunk);
         }
       }
