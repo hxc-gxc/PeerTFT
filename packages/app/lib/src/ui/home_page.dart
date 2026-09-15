@@ -7,6 +7,7 @@ import 'receive_page.dart';
 import 'send_page.dart';
 import 'widgets/app_scaffold.dart';
 import 'widgets/decorations.dart';
+import 'widgets/gradient_button.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -63,24 +64,20 @@ class HomePage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 28),
-            _ActionCard(
-              gradientColors: const [Color(0xFF582BE8), Color(0xFF8B5CF6)],
-              title: 'Envoyer un fichier',
-              subtitle: 'Sélectionner et transférer',
-              isUpload: true,
-              bubbleColor: const Color(0xFF4318D1),
-              onTap: () => Navigator.of(context).push(
+            GradientButton(
+              label: 'Envoyer un fichier',
+              icon: Icons.upload_rounded,
+              colors: const [Color(0xFF582BE8), Color(0xFF8B5CF6)],
+              onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const SendPage()),
               ),
             ),
             const SizedBox(height: 16),
-            _ActionCard(
-              gradientColors: const [Color(0xFFFF6B8B), Color(0xFFFFA5A5)],
-              title: 'Recevoir un fichier',
-              subtitle: 'Prêt à recevoir',
-              isUpload: false,
-              bubbleColor: const Color(0xFFFA5279),
-              onTap: () => Navigator.of(context).push(
+            GradientButton(
+              label: 'Recevoir un fichier',
+              icon: Icons.download_rounded,
+              colors: const [Color(0xFFFF6B8B), Color(0xFFFFA5A5)],
+              onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ReceivePage()),
               ),
             ),
@@ -94,136 +91,6 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-class _ActionCard extends StatelessWidget {
-  const _ActionCard({
-    required this.gradientColors,
-    required this.title,
-    required this.subtitle,
-    required this.isUpload,
-    required this.bubbleColor,
-    required this.onTap,
-  });
-
-  final List<Color> gradientColors;
-  final String title;
-  final String subtitle;
-  final bool isUpload;
-  final Color bubbleColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        boxShadow: [
-          BoxShadow(
-            color: gradientColors.first.withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        clipBehavior: Clip.antiAlias,
-        child: Ink(
-          height: 136,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: gradientColors,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-          ),
-          child: InkWell(
-            onTap: onTap,
-            child: Stack(
-              children: [
-                // Organic background bubble decorations
-                Positioned(
-                  left: -20,
-                  bottom: -30,
-                  child: Container(
-                    width: 90,
-                    height: 90,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: bubbleColor.withValues(alpha: 0.35),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: -15,
-                  right: 90,
-                  child: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.15),
-                    ),
-                  ),
-                ),
-                // Sparkle accents
-                const Positioned(
-                  top: 16,
-                  right: 90,
-                  child: Sparkle(size: 16, color: Colors.white, opacity: 0.6),
-                ),
-                const Positioned(
-                  bottom: 18,
-                  right: 18,
-                  child: Sparkle(size: 14, color: Colors.white, opacity: 0.5),
-                ),
-                // Content row
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              title,
-                              style: GoogleFonts.baloo2(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                height: 1.1,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              subtitle,
-                              style: GoogleFonts.nunito(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white.withValues(alpha: 0.9),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Mockup-faithful prominent tray icon with black stroke
-                      isUpload
-                          ? const UploadTrayIcon(size: 48, color: AppTheme.ink)
-                          : const DownloadTrayIcon(size: 48, color: AppTheme.ink),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _SecurityBadge extends StatelessWidget {
   const _SecurityBadge();

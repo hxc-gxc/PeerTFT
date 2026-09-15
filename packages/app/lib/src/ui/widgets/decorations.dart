@@ -4,29 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 
-/// 4-point sparkle star matching the playful aesthetic of the mockups.
-class Sparkle extends StatelessWidget {
-  const Sparkle({
-    super.key,
-    this.size = 18,
-    this.color = Colors.white,
-    this.opacity = 0.85,
-  });
-
-  final double size;
-  final Color color;
-  final double opacity;
-
-  @override
-  Widget build(BuildContext context) {
-    return Icon(
-      Icons.auto_awesome,
-      size: size,
-      color: color.withValues(alpha: opacity),
-    );
-  }
-}
-
 /// The multi-colored liquid organic blob illustration from the "Recevoir" screen (Mockup 4).
 /// Composed of 3 smooth overlapping organic lobes (violet, coral pink, mint green)
 /// with a glossy specular highlight curve.
@@ -216,90 +193,6 @@ class AvatarBadge extends StatelessWidget {
   }
 }
 
-/// Custom prominent Upload Tray Icon matching Mockup 2 (thick rounded tray with upward arrow).
-class UploadTrayIcon extends StatelessWidget {
-  const UploadTrayIcon({super.key, this.size = 42, this.color = Colors.black});
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size.square(size),
-      painter: _TrayIconPainter(isUpload: true, color: color),
-    );
-  }
-}
-
-/// Custom prominent Download Tray Icon matching Mockup 2 (thick rounded tray with downward arrow).
-class DownloadTrayIcon extends StatelessWidget {
-  const DownloadTrayIcon({super.key, this.size = 42, this.color = Colors.black});
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size.square(size),
-      painter: _TrayIconPainter(isUpload: false, color: color),
-    );
-  }
-}
-
-class _TrayIconPainter extends CustomPainter {
-  _TrayIconPainter({required this.isUpload, required this.color});
-  final bool isUpload;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final strokeW = size.width * 0.11;
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeW
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke;
-
-    final w = size.width;
-    final h = size.height;
-
-    // Tray: a U-shaped open container at the bottom
-    final trayPath = Path()
-      ..moveTo(w * 0.18, h * 0.48)
-      ..lineTo(w * 0.18, h * 0.76)
-      ..quadraticBezierTo(w * 0.18, h * 0.86, w * 0.32, h * 0.86)
-      ..lineTo(w * 0.68, h * 0.86)
-      ..quadraticBezierTo(w * 0.82, h * 0.86, w * 0.82, h * 0.76)
-      ..lineTo(w * 0.82, h * 0.48);
-    canvas.drawPath(trayPath, paint);
-
-    // Arrow stem and head
-    final cx = w * 0.5;
-    if (isUpload) {
-      // Arrow pointing up
-      canvas.drawLine(Offset(cx, h * 0.68), Offset(cx, h * 0.20), paint);
-      final head = Path()
-        ..moveTo(w * 0.34, h * 0.36)
-        ..lineTo(cx, h * 0.18)
-        ..lineTo(w * 0.66, h * 0.36);
-      canvas.drawPath(head, paint);
-    } else {
-      // Arrow pointing down
-      canvas.drawLine(Offset(cx, h * 0.20), Offset(cx, h * 0.66), paint);
-      final head = Path()
-        ..moveTo(w * 0.34, h * 0.50)
-        ..lineTo(cx, h * 0.68)
-        ..lineTo(w * 0.66, h * 0.50);
-      canvas.drawPath(head, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _TrayIconPainter oldDelegate) =>
-      oldDelegate.isUpload != isUpload || oldDelegate.color != color;
-}
-
 /// Three fanned, rotated file-type cards with colorful borders and icons (PDF, Image, Audio)
 /// matching the "Choisir un fichier" dropzone in Mockup 5.
 class FanFileCards extends StatelessWidget {
@@ -348,17 +241,6 @@ class FanFileCards extends StatelessWidget {
               icon: Icons.image_rounded,
               badge: 'IMG',
             ),
-          ),
-          // Sparkles around
-          const Positioned(
-            top: -4,
-            left: 6,
-            child: Sparkle(size: 14, color: AppTheme.indigo),
-          ),
-          const Positioned(
-            top: 2,
-            right: 4,
-            child: Sparkle(size: 13, color: AppTheme.pink),
           ),
         ],
       ),
@@ -538,8 +420,6 @@ class AmbientBackdrop extends StatelessWidget {
           const Positioned(top: 80, left: 32, child: Dot(color: AppTheme.ink, opacity: 0.1)),
           const Positioned(top: 200, right: 36, child: Dot(color: AppTheme.ink, opacity: 0.1, size: 6)),
           Positioned(bottom: 240, right: 60, child: Dot(color: colors[2], opacity: 0.25, size: 8)),
-          Positioned(top: 280, left: 70, child: Sparkle(size: 14, color: colors[1], opacity: 0.45)),
-          Positioned(bottom: 180, left: 30, child: Sparkle(size: 12, color: colors[2], opacity: 0.4)),
         ],
       ),
     );

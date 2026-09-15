@@ -368,7 +368,6 @@ class _SendPageState extends ConsumerState<SendPage> {
     const Positioned(top: 30, left: 140, child: Dot(color: AppTheme.pink, opacity: 0.25, size: 6)),
     const Positioned(bottom: 260, left: 30, child: Dot(color: AppTheme.mint, opacity: 0.3, size: 6)),
     const Positioned(bottom: 60, right: 60, child: Dot(color: AppTheme.ink, opacity: 0.15)),
-    const Positioned(top: 40, right: 60, child: Sparkle(size: 14, color: AppTheme.pink, opacity: 0.4)),
     const Positioned(
       top: 60,
       right: -30,
