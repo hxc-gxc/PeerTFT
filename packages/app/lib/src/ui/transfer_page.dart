@@ -83,10 +83,14 @@ class TransferPage extends ConsumerWidget {
               throughputBps,
             ),
           Failed(:final message) => _failedView(context, message, ref),
-          Reconnecting(:final deadline) => _reconnectingView(context, ref, deadline),
+          Reconnecting(:final deadline) => _reconnectingView(
+            context,
+            ref,
+            deadline,
+          ),
           _ => const Center(
-              child: CircularProgressIndicator(color: AppTheme.indigo),
-            ),
+            child: CircularProgressIndicator(color: AppTheme.indigo),
+          ),
         },
       ),
     );
@@ -122,7 +126,9 @@ class TransferPage extends ConsumerWidget {
   ) {
     final progress = totalBytes > 0 ? transferred / totalBytes : 0.0;
     final mbps = bps / (1024 * 1024);
-    final etaSeconds = bps > 0 ? ((totalBytes - transferred) / bps).ceil() : null;
+    final etaSeconds = bps > 0
+        ? ((totalBytes - transferred) / bps).ceil()
+        : null;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -272,7 +278,10 @@ class TransferPage extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SvgPicture.asset('assets/illustrations/no_connection.svg', height: 140),
+          SvgPicture.asset(
+            'assets/illustrations/no_connection.svg',
+            height: 140,
+          ),
           const SizedBox(height: 16),
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: 24),
@@ -288,7 +297,11 @@ class TransferPage extends ConsumerWidget {
     );
   }
 
-  Widget _reconnectingView(BuildContext context, WidgetRef ref, DateTime deadline) {
+  Widget _reconnectingView(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime deadline,
+  ) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
